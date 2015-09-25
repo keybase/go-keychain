@@ -4,10 +4,19 @@ A library for accessing the Keychain for OSX and iOS.
 
 Requires Mac OSX 9 or greater and iOS 7 or greater.
 
+**WARNING**: This is still being tested and reviewed.
+
 ## Usage
 
 ```go
-item := keychain.NewGenericPassword("MyService", "gabriel", []byte("toomanysecrets"), "com.mycorp", SynchronizableNo, AccessibleWhenUnlockedThisDeviceOnly)
+item := keychain.NewGenericPassword(
+  "MyService",
+  "gabriel",
+  []byte("toomanysecrets"),
+  "com.mycorp",
+  keychain.SynchronizableNo,
+  keychain.AccessibleWhenUnlockedThisDeviceOnly)
+
 err := keychain.AddItem(item)
 if err == KeychainErrorDuplicateItem {
   // Duplicate
