@@ -13,12 +13,10 @@ item := keychain.NewGenericPassword(
   "MyService",
   "gabriel",
   []byte("toomanysecrets"),
-  "com.mycorp",
-  keychain.SynchronizableNo,
-  keychain.AccessibleWhenUnlockedThisDeviceOnly)
+  "com.corp")
 
 err := keychain.AddItem(item)
-if err == KeychainErrorDuplicateItem {
+if err == keychain.KeychainErrorDuplicateItem {
   // Duplicate
 }
 
@@ -26,7 +24,20 @@ accounts, err := keychain.GetAccounts("MyService")
 // Should have 1 account == "gabriel"
 
 err := keychain.DeleteGenericPasswordItem("MyService", "gabriel")
-if err == KeychainErrorNotFound {
+if err == keychain.KeychainErrorNotFound {
   // Not found
 }
+```
+
+
+## Tests
+
+Tests are in `bind`.
+
+## iOS
+
+Bindable package in `bind`. iOS project in `ios`. Run that project to test iOS.
+
+```
+gomobile bind -target=ios -o ios/bind.framework github.com/keybase/go-keychain/bind
 ```

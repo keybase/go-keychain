@@ -51,6 +51,10 @@ func (k KeychainError) Error() string {
 		msg = fmt.Sprintf("Item not found (%d)", k)
 	case KeychainErrorDuplicateItem:
 		msg = fmt.Sprintf("Duplicate item (%d)", k)
+	case KeychainErrorParam:
+		msg = fmt.Sprintf("One or more parameters passed to the function were not valid (%d)", k)
+	case -25243:
+		msg = fmt.Sprintf("No access for item (%d)", k)
 	default:
 		msg = fmt.Sprintf("Keychain Error (%d)", k)
 	}
@@ -73,12 +77,13 @@ var (
 )
 
 var SecClassKey = C.CFTypeRef(C.kSecClass)
-var secClassMap = map[SecClass]C.CFTypeRef{
+var secClassTypeRef = map[SecClass]C.CFTypeRef{
 	SecClassGenericPassword: C.CFTypeRef(C.kSecClassGenericPassword),
 }
 
 var (
 	ServiceKey     = C.CFTypeRef(C.kSecAttrService)
+	LabelKey       = C.CFTypeRef(C.kSecAttrLabel)
 	AccountKey     = C.CFTypeRef(C.kSecAttrAccount)
 	AccessGroupKey = C.CFTypeRef(C.kSecAttrAccessGroup)
 	DataKey        = C.CFTypeRef(C.kSecValueData)
@@ -87,16 +92,41 @@ var (
 type Synchronizable int
 
 const (
-	SynchronizableAny Synchronizable = 1
-	SynchronizableYes                = 2
-	SynchronizableNo                 = 3
+	SynchronizableDefault Synchronizable = 0
+	SynchronizableAny                    = 1
+	SynchronizableYes                    = 2
+	SynchronizableNo                     = 3
 )
 
 var SynchronizableKey = C.CFTypeRef(C.kSecAttrSynchronizable)
-var syncMap = map[Synchronizable]C.CFTypeRef{
+var syncTypeRef = map[Synchronizable]C.CFTypeRef{
 	SynchronizableAny: C.CFTypeRef(C.kSecAttrSynchronizableAny),
 	SynchronizableYes: C.CFTypeRef(C.kCFBooleanTrue),
 	SynchronizableNo:  C.CFTypeRef(C.kCFBooleanFalse),
+}
+
+type Accessible int
+
+const (
+	AccessibleDefault                        Accessible = 0
+	AccessibleWhenUnlocked                              = 1
+	AccessibleAfterFirstUnlock                          = 2
+	AccessibleAlways                                    = 3
+	AccessibleWhenPasscodeSetThisDeviceOnly             = 4
+	AccessibleWhenUnlockedThisDeviceOnly                = 5
+	AccessibleAfterFirstUnlockThisDeviceOnly            = 6
+	AccessibleAccessibleAlwaysThisDeviceOnly            = 7
+)
+
+var AccessibleKey = C.CFTypeRef(C.kSecAttrAccessible)
+var accessibleTypeRef = map[Accessible]C.CFTypeRef{
+	AccessibleWhenUnlocked:                   C.CFTypeRef(C.kSecAttrAccessibleWhenUnlocked),
+	AccessibleAfterFirstUnlock:               C.CFTypeRef(C.kSecAttrAccessibleAfterFirstUnlock),
+	AccessibleAlways:                         C.CFTypeRef(C.kSecAttrAccessibleAlways),
+	AccessibleWhenPasscodeSetThisDeviceOnly:  C.CFTypeRef(C.kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly),
+	AccessibleWhenUnlockedThisDeviceOnly:     C.CFTypeRef(C.kSecAttrAccessibleWhenUnlockedThisDeviceOnly),
+	AccessibleAfterFirstUnlockThisDeviceOnly: C.CFTypeRef(C.kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly),
+	AccessibleAccessibleAlwaysThisDeviceOnly: C.CFTypeRef(C.kSecAttrAccessibleAlwaysThisDeviceOnly),
 }
 
 type MatchLimit int
@@ -108,7 +138,7 @@ const (
 )
 
 var MatchLimitKey = C.CFTypeRef(C.kSecMatchLimit)
-var matchMap = map[MatchLimit]C.CFTypeRef{
+var matchTypeRef = map[MatchLimit]C.CFTypeRef{
 	MatchLimitOne: C.CFTypeRef(C.kSecMatchLimitOne),
 	MatchLimitAll: C.CFTypeRef(C.kSecMatchLimitAll),
 }
@@ -121,46 +151,48 @@ const (
 	ReturnAttributes        = 2 // C.kSecReturnAttributes
 )
 
-type Accessible int
-
-const (
-	AccessibleWhenUnlocked                   Accessible = 1
-	AccessibleAfterFirstUnlock                          = 2
-	AccessibleAlways                                    = 3
-	AccessibleWhenPasscodeSetThisDeviceOnly             = 4
-	AccessibleWhenUnlockedThisDeviceOnly                = 5
-	AccessibleAfterFirstUnlockThisDeviceOnly            = 6
-	AccessibleAccessibleAlwaysThisDeviceOnly            = 7
-)
-
-var AccessibleKey = C.CFTypeRef(C.kSecAttrAccessible)
-var accessibleMap = map[Accessible]C.CFTypeRef{
-	AccessibleWhenUnlocked:                   C.CFTypeRef(C.kSecAttrAccessibleWhenUnlocked),
-	AccessibleAfterFirstUnlock:               C.CFTypeRef(C.kSecAttrAccessibleAfterFirstUnlock),
-	AccessibleAlways:                         C.CFTypeRef(C.kSecAttrAccessibleAlways),
-	AccessibleWhenPasscodeSetThisDeviceOnly:  C.CFTypeRef(C.kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly),
-	AccessibleWhenUnlockedThisDeviceOnly:     C.CFTypeRef(C.kSecAttrAccessibleWhenUnlockedThisDeviceOnly),
-	AccessibleAfterFirstUnlockThisDeviceOnly: C.CFTypeRef(C.kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly),
-	AccessibleAccessibleAlwaysThisDeviceOnly: C.CFTypeRef(C.kSecAttrAccessibleAlwaysThisDeviceOnly),
-}
-
 // KeychainItem for adding, querying or deleting.
 type KeychainItem struct {
 	attr map[C.CFTypeRef]interface{}
 }
 
-// NewGenericPassword creates password KeychainItem for AddItem
-func NewGenericPassword(service string, account string, data []byte, accessGroup string, sync Synchronizable, accessible Accessible) KeychainItem {
+func (k KeychainItem) SetSynchronizable(sync Synchronizable) {
+	if sync != SynchronizableDefault {
+		k.attr[SynchronizableKey] = syncTypeRef[sync]
+	} else {
+		delete(k.attr, SynchronizableKey)
+	}
+}
+
+func (k KeychainItem) SetAccessible(accessible Accessible) {
+	if accessible != AccessibleDefault {
+		k.attr[AccessibleKey] = accessibleTypeRef[accessible]
+	} else {
+		delete(k.attr, AccessibleKey)
+	}
+}
+
+// NewGenericPassword creates password KeychainItem for a generic password.
+func NewGenericPassword(service string, account string, label string, data []byte, accessGroup string) KeychainItem {
 	attr := map[C.CFTypeRef]interface{}{
-		SecClassKey: secClassMap[SecClassGenericPassword],
-		ServiceKey:  service,
-		AccountKey:  account,
-		DataKey:     data,
+		SecClassKey: secClassTypeRef[SecClassGenericPassword],
 	}
 
-	attr[AccessibleKey] = accessibleMap[accessible]
+	if account != "" {
+		attr[AccountKey] = account
+	}
 
-	attr[SynchronizableKey] = syncMap[sync]
+	if service != "" {
+		attr[ServiceKey] = service
+	}
+
+	if data != nil {
+		attr[DataKey] = data
+	}
+
+	if label != "" {
+		attr[LabelKey] = label
+	}
 
 	if accessGroup != "" {
 		attr[AccessGroupKey] = accessGroup
@@ -185,39 +217,31 @@ func AddItem(item KeychainItem) error {
 // KeychainQueryResult stores all possible results from queries.
 // Not all fields all applicable all the time.
 type KeychainQueryResult struct {
-	Service string
-	Account string
-	Data    []byte
+	SecClass C.CFTypeRef
+	Service  string
+	Account  string
+	Label    string
+	Data     []byte
 }
 
 // NewGenericPasswordQuery creates a KeychainItem that can be used in QueryItem
-func NewGenericPasswordQuery(service string, account string, matchLimit MatchLimit, returnType Return) KeychainItem {
-	attr := make(map[C.CFTypeRef]interface{})
-
-	attr[SecClassKey] = secClassMap[SecClassGenericPassword]
-
-	if service != "" {
-		attr[ServiceKey] = service
-	}
-
-	if account != "" {
-		attr[AccountKey] = account
-	}
+func NewGenericPasswordQuery(service string, account string, label string, accessGroup string, matchLimit MatchLimit, returnType Return) KeychainItem {
+	item := NewGenericPassword(service, account, label, nil, accessGroup)
 
 	if matchLimit != MatchLimitDefault {
-		attr[MatchLimitKey] = matchMap[matchLimit]
+		item.attr[MatchLimitKey] = matchTypeRef[matchLimit]
 	}
 
 	switch returnType {
 	case ReturnDefault:
 		// Default means don't set
 	case ReturnAttributes:
-		attr[C.CFTypeRef(C.kSecReturnAttributes)] = true
+		item.attr[C.CFTypeRef(C.kSecReturnAttributes)] = true
 	case ReturnData:
-		attr[C.CFTypeRef(C.kSecReturnData)] = true
+		item.attr[C.CFTypeRef(C.kSecReturnData)] = true
 	}
 
-	return KeychainItem{attr: attr}
+	return item
 }
 
 // QueryItem returns a list of query results.
@@ -245,12 +269,18 @@ func QueryItem(item KeychainItem) ([]KeychainQueryResult, error) {
 	if typeID == C.CFArrayGetTypeID() {
 		arr := cfArrayToArray(C.CFArrayRef(resultsRef))
 		for _, dictRef := range arr {
-			item := convertResult(C.CFDictionaryRef(dictRef))
-			results = append(results, item)
+			item, err := convertResult(C.CFDictionaryRef(dictRef))
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, *item)
 		}
 	} else if typeID == C.CFDictionaryGetTypeID() {
-		item := convertResult(C.CFDictionaryRef(resultsRef))
-		results = append(results, item)
+		item, err := convertResult(C.CFDictionaryRef(resultsRef))
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, *item)
 	} else if typeID == C.CFDataGetTypeID() {
 		b, err := cfDataToBytes(C.CFDataRef(resultsRef))
 		if err != nil {
@@ -259,32 +289,61 @@ func QueryItem(item KeychainItem) ([]KeychainQueryResult, error) {
 		item := KeychainQueryResult{Data: b}
 		results = append(results, item)
 	} else {
-		typeDesc := C.CFCopyTypeIDDescription(typeID)
-		defer C.CFRelease(C.CFTypeRef(typeDesc))
-		return nil, fmt.Errorf("Invalid result type: %s", cfStringToString(typeDesc))
+		return nil, fmt.Errorf("Invalid result type: %s", cfTypeDescription(resultsRef))
 	}
 
 	return results, nil
 }
 
-func convertResult(d C.CFDictionaryRef) KeychainQueryResult {
+func cfTypeDescription(ref C.CFTypeRef) string {
+	typeID := C.CFGetTypeID(ref)
+	typeDesc := C.CFCopyTypeIDDescription(typeID)
+	defer C.CFRelease(C.CFTypeRef(typeDesc))
+	return cfStringToString(typeDesc)
+}
+
+func cfTypeValue(ref C.CFTypeRef) interface{} {
+	typeID := C.CFGetTypeID(ref)
+	if typeID == C.CFStringGetTypeID() {
+		return cfStringToString(C.CFStringRef(ref))
+	} else if typeID == C.CFDataGetTypeID() {
+		b, _ := cfDataToBytes(C.CFDataRef(ref))
+		return b
+	}
+	return nil
+}
+
+func convertResult(d C.CFDictionaryRef) (*KeychainQueryResult, error) {
 	m := cfDictionaryToMap(C.CFDictionaryRef(d))
 	result := KeychainQueryResult{}
 	for k, v := range m {
-		switch k {
-		case ServiceKey:
+		keyStr := cfStringToString(C.CFStringRef(k))
+		switch keyStr {
+		case cfStringToString(C.CFStringRef(SecClassKey)):
+			result.SecClass = v
+		case cfStringToString(C.CFStringRef(ServiceKey)):
 			result.Service = cfStringToString(C.CFStringRef(v))
-		case AccountKey:
+		case cfStringToString(C.CFStringRef(AccountKey)):
 			result.Account = cfStringToString(C.CFStringRef(v))
+		case cfStringToString(C.CFStringRef(LabelKey)):
+			result.Label = cfStringToString(C.CFStringRef(v))
+		case cfStringToString(C.CFStringRef(DataKey)):
+			b, err := cfDataToBytes(C.CFDataRef(v))
+			if err != nil {
+				return nil, err
+			}
+			result.Data = b
+			// default:
+			// fmt.Printf("Unhandled key in conversion: %v = %v\n", cfTypeValue(k), cfTypeValue(v))
 		}
 	}
-	return result
+	return &result, nil
 }
 
 // DeleteGenericPasswordItem removes a generic password item
 func DeleteGenericPasswordItem(service string, account string) error {
 	attr := map[C.CFTypeRef]interface{}{
-		SecClassKey: secClassMap[SecClassGenericPassword],
+		SecClassKey: secClassTypeRef[SecClassGenericPassword],
 		ServiceKey:  service,
 		AccountKey:  account,
 	}
@@ -305,7 +364,7 @@ func DeleteItem(item KeychainItem) error {
 
 // GetAccounts returns accounts for service. This is a convienience method.
 func GetAccounts(service string) ([]string, error) {
-	query := NewGenericPasswordQuery(service, "", MatchLimitAll, ReturnAttributes)
+	query := NewGenericPasswordQuery(service, "", "", "", MatchLimitAll, ReturnAttributes)
 	results, err := QueryItem(query)
 	if err != nil {
 		return nil, err
@@ -320,8 +379,8 @@ func GetAccounts(service string) ([]string, error) {
 }
 
 // GetGenericPassword returns password data for service and account. This is a convienence method.
-func GetGenericPassword(service string, account string) ([]byte, error) {
-	query := NewGenericPasswordQuery(service, account, MatchLimitOne, ReturnData)
+func GetGenericPassword(service string, account string, label string, accessGroup string) ([]byte, error) {
+	query := NewGenericPasswordQuery(service, account, label, accessGroup, MatchLimitOne, ReturnData)
 	results, err := QueryItem(query)
 	if err != nil {
 		return nil, err
