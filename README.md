@@ -9,11 +9,11 @@ Requires Mac OSX 9 or greater and iOS 7 or greater.
 ## Usage
 
 ```go
-item := keychain.NewGenericPassword("MyService", "gabriel", []byte("toomanysecrets"), "com.corp")
+item := keychain.NewGenericPassword("MyService", "gabriel", "A label", []byte("toomanysecrets"), "com.corp")
 item.SetSynchronizable(keychain.SynchronizableNo)
 item.SetAccessible(keychain.AccessibleWhenUnlocked)
 err := keychain.AddItem(item)
-if err == keychain.KeychainErrorDuplicateItem {
+if err == keychain.ErrorDuplicateItem {
   // Duplicate
 }
 
@@ -21,7 +21,7 @@ accounts, err := keychain.GetAccounts("MyService")
 // Should have 1 account == "gabriel"
 
 err := keychain.DeleteGenericPasswordItem("MyService", "gabriel")
-if err == keychain.KeychainErrorNotFound {
+if err == keychain.ErrorNotFound {
   // Not found
 }
 ```

@@ -22,36 +22,36 @@ import (
 	"unsafe"
 )
 
-type KeychainError int
+type Error int
 
 var (
-	KeychainErrorUnimplemented         KeychainError = KeychainError(C.errSecUnimplemented)
-	KeychainErrorParam                               = KeychainError(C.errSecParam)
-	KeychainErrorAllocate                            = KeychainError(C.errSecAllocate)
-	KeychainErrorNotAvailable                        = KeychainError(C.errSecNotAvailable)
-	KeychainErrorAuthFailed                          = KeychainError(C.errSecAuthFailed)
-	KeychainErrorDuplicateItem                       = KeychainError(C.errSecDuplicateItem)
-	KeychainErrorItemNotFound                        = KeychainError(C.errSecItemNotFound)
-	KeychainErrorInteractionNotAllowed               = KeychainError(C.errSecInteractionNotAllowed)
-	KeychainErrorDecode                              = KeychainError(C.errSecDecode)
+	ErrorUnimplemented         Error = Error(C.errSecUnimplemented)
+	ErrorParam                       = Error(C.errSecParam)
+	ErrorAllocate                    = Error(C.errSecAllocate)
+	ErrorNotAvailable                = Error(C.errSecNotAvailable)
+	ErrorAuthFailed                  = Error(C.errSecAuthFailed)
+	ErrorDuplicateItem               = Error(C.errSecDuplicateItem)
+	ErrorItemNotFound                = Error(C.errSecItemNotFound)
+	ErrorInteractionNotAllowed       = Error(C.errSecInteractionNotAllowed)
+	ErrorDecode                      = Error(C.errSecDecode)
 )
 
-func checkKeychainError(errCode C.OSStatus) error {
+func checkError(errCode C.OSStatus) error {
 	if errCode == C.errSecSuccess {
 		return nil
 	}
-	return KeychainError(errCode)
+	return Error(errCode)
 }
 
-func (k KeychainError) Error() string {
+func (k Error) Error() string {
 	var msg string
 	// SecCopyErrorMessageString is only available on OSX, so derive manually.
 	switch k {
-	case KeychainErrorItemNotFound:
+	case ErrorItemNotFound:
 		msg = fmt.Sprintf("Item not found (%d)", k)
-	case KeychainErrorDuplicateItem:
+	case ErrorDuplicateItem:
 		msg = fmt.Sprintf("Duplicate item (%d)", k)
-	case KeychainErrorParam:
+	case ErrorParam:
 		msg = fmt.Sprintf("One or more parameters passed to the function were not valid (%d)", k)
 	case -25243:
 		msg = fmt.Sprintf("No access for item (%d)", k)
@@ -151,12 +151,14 @@ const (
 	ReturnAttributes        = 2 // C.kSecReturnAttributes
 )
 
-// KeychainItem for adding, querying or deleting.
-type KeychainItem struct {
+// Item for adding, querying or deleting.
+type Item struct {
+	// Attributes for item. Keys must always be CFTypeRef but values can be
+	// string, []byte or CFTypeRef (constant).
 	attr map[C.CFTypeRef]interface{}
 }
 
-func (k KeychainItem) SetSynchronizable(sync Synchronizable) {
+func (k Item) SetSynchronizable(sync Synchronizable) {
 	if sync != SynchronizableDefault {
 		k.attr[SynchronizableKey] = syncTypeRef[sync]
 	} else {
@@ -164,7 +166,7 @@ func (k KeychainItem) SetSynchronizable(sync Synchronizable) {
 	}
 }
 
-func (k KeychainItem) SetAccessible(accessible Accessible) {
+func (k Item) SetAccessible(accessible Accessible) {
 	if accessible != AccessibleDefault {
 		k.attr[AccessibleKey] = accessibleTypeRef[accessible]
 	} else {
@@ -172,8 +174,8 @@ func (k KeychainItem) SetAccessible(accessible Accessible) {
 	}
 }
 
-// NewGenericPassword creates password KeychainItem for a generic password.
-func NewGenericPassword(service string, account string, label string, data []byte, accessGroup string) KeychainItem {
+// NewGenericPassword creates password Item for a generic password.
+func NewGenericPassword(service string, account string, label string, data []byte, accessGroup string) Item {
 	attr := map[C.CFTypeRef]interface{}{
 		SecClassKey: secClassTypeRef[SecClassGenericPassword],
 	}
@@ -198,11 +200,11 @@ func NewGenericPassword(service string, account string, label string, data []byt
 		attr[AccessGroupKey] = accessGroup
 	}
 
-	return KeychainItem{attr: attr}
+	return Item{attr: attr}
 }
 
-// AddItem adds a KeychainItem
-func AddItem(item KeychainItem) error {
+// AddItem adds a Item
+func AddItem(item Item) error {
 	cfDict, err := convertAttr(item.attr)
 	if err != nil {
 		return err
@@ -210,22 +212,22 @@ func AddItem(item KeychainItem) error {
 	defer C.CFRelease(C.CFTypeRef(cfDict))
 
 	errCode := C.SecItemAdd(cfDict, nil)
-	err = checkKeychainError(errCode)
+	err = checkError(errCode)
 	return err
 }
 
-// KeychainQueryResult stores all possible results from queries.
-// Not all fields all applicable all the time.
-type KeychainQueryResult struct {
-	SecClass C.CFTypeRef
-	Service  string
-	Account  string
-	Label    string
-	Data     []byte
+// QueryResult stores all possible results from queries.
+// Not all fields all applicable all the time. Results depend on query.
+type QueryResult struct {
+	Service     string
+	Account     string
+	AccessGroup string
+	Label       string
+	Data        []byte
 }
 
-// NewGenericPasswordQuery creates a KeychainItem that can be used in QueryItem
-func NewGenericPasswordQuery(service string, account string, label string, accessGroup string, matchLimit MatchLimit, returnType Return) KeychainItem {
+// NewGenericPasswordQuery creates a Item that can be used in QueryItem
+func NewGenericPasswordQuery(service string, account string, label string, accessGroup string, matchLimit MatchLimit, returnType Return) Item {
 	item := NewGenericPassword(service, account, label, nil, accessGroup)
 
 	if matchLimit != MatchLimitDefault {
@@ -245,7 +247,7 @@ func NewGenericPasswordQuery(service string, account string, label string, acces
 }
 
 // QueryItem returns a list of query results.
-func QueryItem(item KeychainItem) ([]KeychainQueryResult, error) {
+func QueryItem(item Item) ([]QueryResult, error) {
 	cfDict, err := convertAttr(item.attr)
 	if err != nil {
 		return nil, err
@@ -254,16 +256,16 @@ func QueryItem(item KeychainItem) ([]KeychainQueryResult, error) {
 
 	var resultsRef C.CFTypeRef
 	errCode := C.SecItemCopyMatching(cfDict, &resultsRef)
-	if KeychainError(errCode) == KeychainErrorItemNotFound {
+	if Error(errCode) == ErrorItemNotFound {
 		return nil, nil
 	}
-	err = checkKeychainError(errCode)
+	err = checkError(errCode)
 	if err != nil {
 		return nil, err
 	}
 	defer C.CFRelease(resultsRef)
 
-	results := make([]KeychainQueryResult, 0, 1)
+	results := make([]QueryResult, 0, 1)
 
 	typeID := C.CFGetTypeID(resultsRef)
 	if typeID == C.CFArrayGetTypeID() {
@@ -286,7 +288,7 @@ func QueryItem(item KeychainItem) ([]KeychainQueryResult, error) {
 		if err != nil {
 			return nil, err
 		}
-		item := KeychainQueryResult{Data: b}
+		item := QueryResult{Data: b}
 		results = append(results, item)
 	} else {
 		return nil, fmt.Errorf("Invalid result type: %s", cfTypeDescription(resultsRef))
@@ -313,18 +315,20 @@ func cfTypeValue(ref C.CFTypeRef) interface{} {
 	return nil
 }
 
-func convertResult(d C.CFDictionaryRef) (*KeychainQueryResult, error) {
+func convertResult(d C.CFDictionaryRef) (*QueryResult, error) {
 	m := cfDictionaryToMap(C.CFDictionaryRef(d))
-	result := KeychainQueryResult{}
+	result := QueryResult{}
 	for k, v := range m {
+		// Compare go string conversions since iOS and OSX have different types
+		// for these values (CFTypeRef vs CFStringRef).
 		keyStr := cfStringToString(C.CFStringRef(k))
 		switch keyStr {
-		case cfStringToString(C.CFStringRef(SecClassKey)):
-			result.SecClass = v
 		case cfStringToString(C.CFStringRef(ServiceKey)):
 			result.Service = cfStringToString(C.CFStringRef(v))
 		case cfStringToString(C.CFStringRef(AccountKey)):
 			result.Account = cfStringToString(C.CFStringRef(v))
+		case cfStringToString(C.CFStringRef(AccessGroupKey)):
+			result.AccessGroup = cfStringToString(C.CFStringRef(v))
 		case cfStringToString(C.CFStringRef(LabelKey)):
 			result.Label = cfStringToString(C.CFStringRef(v))
 		case cfStringToString(C.CFStringRef(DataKey)):
@@ -347,11 +351,11 @@ func DeleteGenericPasswordItem(service string, account string) error {
 		ServiceKey:  service,
 		AccountKey:  account,
 	}
-	return DeleteItem(KeychainItem{attr: attr})
+	return DeleteItem(Item{attr: attr})
 }
 
-// DeleteItem removes a KeychainItem
-func DeleteItem(item KeychainItem) error {
+// DeleteItem removes a Item
+func DeleteItem(item Item) error {
 	cfDict, err := convertAttr(item.attr)
 	if err != nil {
 		return err
@@ -359,7 +363,7 @@ func DeleteItem(item KeychainItem) error {
 	defer C.CFRelease(C.CFTypeRef(cfDict))
 
 	errCode := C.SecItemDelete(cfDict)
-	return checkKeychainError(errCode)
+	return checkError(errCode)
 }
 
 // GetAccounts returns accounts for service. This is a convienience method.

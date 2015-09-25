@@ -53,7 +53,7 @@ func TestGenericPassword(service string, accessGroup string) error {
 
 	// Test dupe
 	err = keychain.AddItem(item)
-	if err != keychain.KeychainErrorDuplicateItem {
+	if err != keychain.ErrorDuplicateItem {
 		return fmt.Errorf("Should error with duplicate item")
 	}
 
@@ -134,7 +134,7 @@ func TestGenericPassword(service string, accessGroup string) error {
 
 	// Test remove not found
 	err = keychain.DeleteItem(item)
-	if err != keychain.KeychainErrorItemNotFound {
+	if err != keychain.ErrorItemNotFound {
 		return fmt.Errorf("Error should be not found")
 	}
 
