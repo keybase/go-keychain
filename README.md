@@ -17,7 +17,7 @@ if err == keychain.ErrorDuplicateItem {
   // Duplicate
 }
 
-accounts, err := keychain.GetAccounts("MyService")
+accounts, err := keychain.GetAccountsForService("MyService")
 // Should have 1 account == "gabriel"
 
 err := keychain.DeleteGenericPasswordItem("MyService", "gabriel")

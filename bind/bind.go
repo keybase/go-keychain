@@ -40,7 +40,7 @@ func TestGenericPassword(service string, accessGroup string) error {
 	defer keychain.DeleteItem(item2)
 
 	// Test account names empty
-	accounts, err := keychain.GetAccounts(service)
+	accounts, err := keychain.GetAccountsForService(service)
 	if len(accounts) != 0 {
 		return fmt.Errorf("Should have no accounts yet")
 	}
@@ -64,7 +64,9 @@ func TestGenericPassword(service string, accessGroup string) error {
 	}
 
 	// Test querying attributes
-	query := keychain.NewGenericPasswordQuery(service, account, "", accessGroup, keychain.MatchLimitAll, keychain.ReturnAttributes)
+	query := keychain.NewGenericPassword(service, account, "", nil, accessGroup)
+	query.SetMatchLimit(keychain.MatchLimitAll)
+	query.SetReturn(keychain.ReturnAttributes)
 	results, err := keychain.QueryItem(query)
 	if err != nil {
 		return err
@@ -97,7 +99,7 @@ func TestGenericPassword(service string, accessGroup string) error {
 	}
 
 	// Test account names
-	accounts2, err := keychain.GetAccounts(service)
+	accounts2, err := keychain.GetAccountsForService(service)
 	if err != nil {
 		return err
 	}
@@ -110,21 +112,24 @@ func TestGenericPassword(service string, accessGroup string) error {
 	}
 
 	// Remove
-	queryDel := keychain.NewGenericPasswordQuery(service, account, "", accessGroup, keychain.MatchLimitAll, keychain.ReturnDefault)
+	queryDel := keychain.NewGenericPassword(service, account, "", nil, accessGroup)
+	queryDel.SetMatchLimit(keychain.MatchLimitAll)
 	err = keychain.DeleteItem(queryDel)
 	if err != nil {
 		return err
 	}
 
 	// Test removed
-	query3 := keychain.NewGenericPasswordQuery(service, account, "", accessGroup, keychain.MatchLimitAll, keychain.ReturnAttributes)
+	query3 := keychain.NewGenericPassword(service, account, "", nil, accessGroup)
+	query3.SetMatchLimit(keychain.MatchLimitAll)
+	query3.SetReturn(keychain.ReturnAttributes)
 	results3, err := keychain.QueryItem(query3)
 
 	if len(results3) != 0 {
 		return fmt.Errorf("Results should have been empty")
 	}
 
-	accounts3, err := keychain.GetAccounts(service)
+	accounts3, err := keychain.GetAccountsForService(service)
 	if err != nil {
 		return err
 	}

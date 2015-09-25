@@ -158,7 +158,7 @@ type Item struct {
 	attr map[C.CFTypeRef]interface{}
 }
 
-func (k Item) SetSynchronizable(sync Synchronizable) {
+func (k *Item) SetSynchronizable(sync Synchronizable) {
 	if sync != SynchronizableDefault {
 		k.attr[SynchronizableKey] = syncTypeRef[sync]
 	} else {
@@ -166,11 +166,31 @@ func (k Item) SetSynchronizable(sync Synchronizable) {
 	}
 }
 
-func (k Item) SetAccessible(accessible Accessible) {
+func (k *Item) SetAccessible(accessible Accessible) {
 	if accessible != AccessibleDefault {
 		k.attr[AccessibleKey] = accessibleTypeRef[accessible]
 	} else {
 		delete(k.attr, AccessibleKey)
+	}
+}
+
+func (k *Item) SetMatchLimit(matchLimit MatchLimit) {
+	if matchLimit != MatchLimitDefault {
+		k.attr[MatchLimitKey] = matchTypeRef[matchLimit]
+	} else {
+		delete(k.attr, MatchLimitKey)
+	}
+}
+
+func (k *Item) SetReturn(returnType Return) {
+	switch returnType {
+	case ReturnDefault:
+		delete(k.attr, C.CFTypeRef(C.kSecReturnAttributes))
+		delete(k.attr, C.CFTypeRef(C.kSecReturnData))
+	case ReturnAttributes:
+		k.attr[C.CFTypeRef(C.kSecReturnAttributes)] = true
+	case ReturnData:
+		k.attr[C.CFTypeRef(C.kSecReturnData)] = true
 	}
 }
 
@@ -224,26 +244,6 @@ type QueryResult struct {
 	AccessGroup string
 	Label       string
 	Data        []byte
-}
-
-// NewGenericPasswordQuery creates a Item that can be used in QueryItem
-func NewGenericPasswordQuery(service string, account string, label string, accessGroup string, matchLimit MatchLimit, returnType Return) Item {
-	item := NewGenericPassword(service, account, label, nil, accessGroup)
-
-	if matchLimit != MatchLimitDefault {
-		item.attr[MatchLimitKey] = matchTypeRef[matchLimit]
-	}
-
-	switch returnType {
-	case ReturnDefault:
-		// Default means don't set
-	case ReturnAttributes:
-		item.attr[C.CFTypeRef(C.kSecReturnAttributes)] = true
-	case ReturnData:
-		item.attr[C.CFTypeRef(C.kSecReturnData)] = true
-	}
-
-	return item
 }
 
 // QueryItem returns a list of query results.
@@ -367,8 +367,10 @@ func DeleteItem(item Item) error {
 }
 
 // GetAccounts returns accounts for service. This is a convienience method.
-func GetAccounts(service string) ([]string, error) {
-	query := NewGenericPasswordQuery(service, "", "", "", MatchLimitAll, ReturnAttributes)
+func GetAccountsForService(service string) ([]string, error) {
+	query := NewGenericPassword(service, "", "", nil, "")
+	query.SetMatchLimit(MatchLimitAll)
+	query.SetReturn(ReturnAttributes)
 	results, err := QueryItem(query)
 	if err != nil {
 		return nil, err
@@ -384,7 +386,9 @@ func GetAccounts(service string) ([]string, error) {
 
 // GetGenericPassword returns password data for service and account. This is a convienence method.
 func GetGenericPassword(service string, account string, label string, accessGroup string) ([]byte, error) {
-	query := NewGenericPasswordQuery(service, account, label, accessGroup, MatchLimitOne, ReturnData)
+	query := NewGenericPassword(service, account, label, nil, accessGroup)
+	query.SetMatchLimit(MatchLimitOne)
+	query.SetReturn(ReturnData)
 	results, err := QueryItem(query)
 	if err != nil {
 		return nil, err
