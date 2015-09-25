@@ -9,12 +9,9 @@ Requires Mac OSX 9 or greater and iOS 7 or greater.
 ## Usage
 
 ```go
-item := keychain.NewGenericPassword(
-  "MyService",
-  "gabriel",
-  []byte("toomanysecrets"),
-  "com.corp")
-
+item := keychain.NewGenericPassword("MyService", "gabriel", []byte("toomanysecrets"), "com.corp")
+item.SetSynchronizable(keychain.SynchronizableNo)
+item.SetAccessible(keychain.AccessibleWhenUnlocked)
 err := keychain.AddItem(item)
 if err == keychain.KeychainErrorDuplicateItem {
   // Duplicate

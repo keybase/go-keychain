@@ -27,6 +27,8 @@ func TestGenericPassword(service string, accessGroup string) error {
 
 	account := "Testing account with unicode テスト"
 	item := keychain.NewGenericPassword(service, account, "", []byte("toomanysecrets"), accessGroup)
+	item.SetSynchronizable(keychain.SynchronizableNo)
+	item.SetAccessible(keychain.AccessibleWhenUnlocked)
 
 	account2 := "Testing account #2"
 	item2 := keychain.NewGenericPassword(service, account2, "", []byte("toomanysecrets2"), accessGroup)
