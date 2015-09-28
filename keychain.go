@@ -346,7 +346,7 @@ func DeleteItem(item Item) error {
 	return checkError(errCode)
 }
 
-// GetAccounts returns accounts for service. This is a convienience method.
+// GetAccounts returns accounts for service. This is a convenience method.
 func GetAccountsForService(service string) ([]string, error) {
 	query := NewGenericPassword(service, "", "", nil, "")
 	query.SetMatchLimit(MatchLimitAll)
@@ -364,7 +364,7 @@ func GetAccountsForService(service string) ([]string, error) {
 	return accounts, nil
 }
 
-// GetGenericPassword returns password data for service and account. This is a convienence method.
+// GetGenericPassword returns password data for service and account. This is a convenience method.
 func GetGenericPassword(service string, account string, label string, accessGroup string) ([]byte, error) {
 	query := NewGenericPassword(service, account, label, nil, accessGroup)
 	query.SetMatchLimit(MatchLimitOne)
