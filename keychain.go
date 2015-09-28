@@ -76,17 +76,17 @@ var (
 	SecClassGenericPassword SecClass = 1
 )
 
-var SecClassKey = C.CFTypeRef(C.kSecClass)
+var SecClassKey = attrKey(C.CFTypeRef(C.kSecClass))
 var secClassTypeRef = map[SecClass]C.CFTypeRef{
 	SecClassGenericPassword: C.CFTypeRef(C.kSecClassGenericPassword),
 }
 
 var (
-	ServiceKey     = C.CFTypeRef(C.kSecAttrService)
-	LabelKey       = C.CFTypeRef(C.kSecAttrLabel)
-	AccountKey     = C.CFTypeRef(C.kSecAttrAccount)
-	AccessGroupKey = C.CFTypeRef(C.kSecAttrAccessGroup)
-	DataKey        = C.CFTypeRef(C.kSecValueData)
+	ServiceKey     = attrKey(C.CFTypeRef(C.kSecAttrService))
+	LabelKey       = attrKey(C.CFTypeRef(C.kSecAttrLabel))
+	AccountKey     = attrKey(C.CFTypeRef(C.kSecAttrAccount))
+	AccessGroupKey = attrKey(C.CFTypeRef(C.kSecAttrAccessGroup))
+	DataKey        = attrKey(C.CFTypeRef(C.kSecValueData))
 )
 
 type Synchronizable int
@@ -98,7 +98,7 @@ const (
 	SynchronizableNo                     = 3
 )
 
-var SynchronizableKey = C.CFTypeRef(C.kSecAttrSynchronizable)
+var SynchronizableKey = attrKey(C.CFTypeRef(C.kSecAttrSynchronizable))
 var syncTypeRef = map[Synchronizable]C.CFTypeRef{
 	SynchronizableAny: C.CFTypeRef(C.kSecAttrSynchronizableAny),
 	SynchronizableYes: C.CFTypeRef(C.kCFBooleanTrue),
@@ -118,7 +118,7 @@ const (
 	AccessibleAccessibleAlwaysThisDeviceOnly            = 7
 )
 
-var AccessibleKey = C.CFTypeRef(C.kSecAttrAccessible)
+var AccessibleKey = attrKey(C.CFTypeRef(C.kSecAttrAccessible))
 var accessibleTypeRef = map[Accessible]C.CFTypeRef{
 	AccessibleWhenUnlocked:                   C.CFTypeRef(C.kSecAttrAccessibleWhenUnlocked),
 	AccessibleAfterFirstUnlock:               C.CFTypeRef(C.kSecAttrAccessibleAfterFirstUnlock),
@@ -137,25 +137,19 @@ const (
 	MatchLimitAll                = 2
 )
 
-var MatchLimitKey = C.CFTypeRef(C.kSecMatchLimit)
+var MatchLimitKey = attrKey(C.CFTypeRef(C.kSecMatchLimit))
 var matchTypeRef = map[MatchLimit]C.CFTypeRef{
 	MatchLimitOne: C.CFTypeRef(C.kSecMatchLimitOne),
 	MatchLimitAll: C.CFTypeRef(C.kSecMatchLimitAll),
 }
 
-type Return int
-
-const (
-	ReturnDefault    Return = 0
-	ReturnData              = 1 // C.kSecReturnData
-	ReturnAttributes        = 2 // C.kSecReturnAttributes
-)
+var ReturnAttributesKey = attrKey(C.CFTypeRef(C.kSecReturnAttributes))
+var ReturnDataKey = attrKey(C.CFTypeRef(C.kSecReturnData))
 
 // Item for adding, querying or deleting.
 type Item struct {
-	// Attributes for item. Keys must always be CFTypeRef but values can be
-	// string, []byte or CFTypeRef (constant).
-	attr map[C.CFTypeRef]interface{}
+	// Values can be string, []byte or CFTypeRef (constant).
+	attr map[string]interface{}
 }
 
 func (k *Item) SetSynchronizable(sync Synchronizable) {
@@ -182,21 +176,17 @@ func (k *Item) SetMatchLimit(matchLimit MatchLimit) {
 	}
 }
 
-func (k *Item) SetReturn(returnType Return) {
-	switch returnType {
-	case ReturnDefault:
-		delete(k.attr, C.CFTypeRef(C.kSecReturnAttributes))
-		delete(k.attr, C.CFTypeRef(C.kSecReturnData))
-	case ReturnAttributes:
-		k.attr[C.CFTypeRef(C.kSecReturnAttributes)] = true
-	case ReturnData:
-		k.attr[C.CFTypeRef(C.kSecReturnData)] = true
-	}
+func (k *Item) SetReturnAttributes(b bool) {
+	k.attr[ReturnAttributesKey] = b
+}
+
+func (k *Item) SetReturnData(b bool) {
+	k.attr[ReturnDataKey] = b
 }
 
 // NewGenericPassword creates password Item for a generic password.
 func NewGenericPassword(service string, account string, label string, data []byte, accessGroup string) Item {
-	attr := map[C.CFTypeRef]interface{}{
+	attr := map[string]interface{}{
 		SecClassKey: secClassTypeRef[SecClassGenericPassword],
 	}
 
@@ -304,34 +294,24 @@ func cfTypeDescription(ref C.CFTypeRef) string {
 	return cfStringToString(typeDesc)
 }
 
-func cfTypeValue(ref C.CFTypeRef) interface{} {
-	typeID := C.CFGetTypeID(ref)
-	if typeID == C.CFStringGetTypeID() {
-		return cfStringToString(C.CFStringRef(ref))
-	} else if typeID == C.CFDataGetTypeID() {
-		b, _ := cfDataToBytes(C.CFDataRef(ref))
-		return b
-	}
-	return nil
+func attrKey(ref C.CFTypeRef) string {
+	return cfStringToString(C.CFStringRef(ref))
 }
 
 func convertResult(d C.CFDictionaryRef) (*QueryResult, error) {
 	m := cfDictionaryToMap(C.CFDictionaryRef(d))
 	result := QueryResult{}
 	for k, v := range m {
-		// Compare go string conversions since iOS and OSX have different types
-		// for these values (CFTypeRef vs CFStringRef).
-		keyStr := cfStringToString(C.CFStringRef(k))
-		switch keyStr {
-		case cfStringToString(C.CFStringRef(ServiceKey)):
+		switch attrKey(k) {
+		case ServiceKey:
 			result.Service = cfStringToString(C.CFStringRef(v))
-		case cfStringToString(C.CFStringRef(AccountKey)):
+		case AccountKey:
 			result.Account = cfStringToString(C.CFStringRef(v))
-		case cfStringToString(C.CFStringRef(AccessGroupKey)):
+		case AccessGroupKey:
 			result.AccessGroup = cfStringToString(C.CFStringRef(v))
-		case cfStringToString(C.CFStringRef(LabelKey)):
+		case LabelKey:
 			result.Label = cfStringToString(C.CFStringRef(v))
-		case cfStringToString(C.CFStringRef(DataKey)):
+		case DataKey:
 			b, err := cfDataToBytes(C.CFDataRef(v))
 			if err != nil {
 				return nil, err
@@ -346,7 +326,7 @@ func convertResult(d C.CFDictionaryRef) (*QueryResult, error) {
 
 // DeleteGenericPasswordItem removes a generic password item
 func DeleteGenericPasswordItem(service string, account string) error {
-	attr := map[C.CFTypeRef]interface{}{
+	attr := map[string]interface{}{
 		SecClassKey: secClassTypeRef[SecClassGenericPassword],
 		ServiceKey:  service,
 		AccountKey:  account,
@@ -370,7 +350,7 @@ func DeleteItem(item Item) error {
 func GetAccountsForService(service string) ([]string, error) {
 	query := NewGenericPassword(service, "", "", nil, "")
 	query.SetMatchLimit(MatchLimitAll)
-	query.SetReturn(ReturnAttributes)
+	query.SetReturnAttributes(true)
 	results, err := QueryItem(query)
 	if err != nil {
 		return nil, err
@@ -388,7 +368,7 @@ func GetAccountsForService(service string) ([]string, error) {
 func GetGenericPassword(service string, account string, label string, accessGroup string) ([]byte, error) {
 	query := NewGenericPassword(service, account, label, nil, accessGroup)
 	query.SetMatchLimit(MatchLimitOne)
-	query.SetReturn(ReturnData)
+	query.SetReturnData(true)
 	results, err := QueryItem(query)
 	if err != nil {
 		return nil, err
@@ -403,7 +383,7 @@ func GetGenericPassword(service string, account string, label string, accessGrou
 }
 
 // Covert attributes to CFDictionaryRef. You need to release the result.
-func convertAttr(attr map[C.CFTypeRef]interface{}) (C.CFDictionaryRef, error) {
+func convertAttr(attr map[string]interface{}) (C.CFDictionaryRef, error) {
 	m := make(map[C.CFTypeRef]C.CFTypeRef)
 	for key, i := range attr {
 		var valueRef C.CFTypeRef
@@ -433,7 +413,11 @@ func convertAttr(attr map[C.CFTypeRef]interface{}) (C.CFDictionaryRef, error) {
 			valueRef = C.CFTypeRef(stringRef)
 			defer C.CFRelease(valueRef)
 		}
-		m[key] = valueRef
+		keyRef, err := stringToCFString(key)
+		if err != nil {
+			return nil, err
+		}
+		m[C.CFTypeRef(keyRef)] = valueRef
 	}
 
 	cfDict, err := mapToCFDictionary(m)

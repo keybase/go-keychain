@@ -66,7 +66,7 @@ func TestGenericPassword(service string, accessGroup string) error {
 	// Test querying attributes
 	query := keychain.NewGenericPassword(service, account, "", nil, accessGroup)
 	query.SetMatchLimit(keychain.MatchLimitAll)
-	query.SetReturn(keychain.ReturnAttributes)
+	query.SetReturnAttributes(true)
 	results, err := keychain.QueryItem(query)
 	if err != nil {
 		return err
@@ -122,7 +122,7 @@ func TestGenericPassword(service string, accessGroup string) error {
 	// Test removed
 	query3 := keychain.NewGenericPassword(service, account, "", nil, accessGroup)
 	query3.SetMatchLimit(keychain.MatchLimitAll)
-	query3.SetReturn(keychain.ReturnAttributes)
+	query3.SetReturnAttributes(true)
 	results3, err := keychain.QueryItem(query3)
 
 	if len(results3) != 0 {
