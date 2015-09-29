@@ -9,20 +9,28 @@ import (
 	"github.com/keybase/go-keychain"
 )
 
-func AddGenericPassword(service string, account string, label string, accessGroup string, password string) error {
+type Test interface {
+	Fail(s string)
+}
+
+func AddGenericPassword(service string, account string, label string, password string, accessGroup string) error {
 	item := keychain.NewGenericPassword(service, account, label, []byte(password), accessGroup)
 	return keychain.AddItem(item)
 }
 
-func DeleteGenericPassword(service string, account string, label string, accessGroup string) error {
-	item := keychain.NewGenericPassword(service, account, label, nil, accessGroup)
+func DeleteGenericPassword(service string, account string, accessGroup string) error {
+	item := keychain.NewItem()
+	item.SetSecClass(keychain.SecClassGenericPassword)
+	item.SetService(service)
+	item.SetAccount(account)
+	item.SetAccessGroup(accessGroup)
 	return keychain.DeleteItem(item)
 }
 
 // TestGenericPassword runs test code for generic password keychain item.
 // This is here so we can export using gomobile bind and run this method on iOS simulator and device.
 // Access groups aren't supported in iOS simulator.
-func TestGenericPassword(service string, accessGroup string) error {
+func GenericPasswordTest(t Test, service string, accessGroup string) {
 	var err error
 
 	account := "Testing account with unicode テスト"
@@ -34,114 +42,131 @@ func TestGenericPassword(service string, accessGroup string) error {
 	item2 := keychain.NewGenericPassword(service, account2, "", []byte("toomanysecrets2"), accessGroup)
 
 	// Cleanup
-	keychain.DeleteItem(item)
 	defer keychain.DeleteItem(item)
-	keychain.DeleteItem(item2)
 	defer keychain.DeleteItem(item2)
 
 	// Test account names empty
-	accounts, err := keychain.GetAccountsForService(service)
+	accounts, err := keychain.GetGenericPasswordAccounts(service)
 	if len(accounts) != 0 {
-		return fmt.Errorf("Should have no accounts yet")
+		t.Fail("Should have no accounts")
 	}
 
 	// Test add
 	err = keychain.AddItem(item)
 	if err != nil {
-		return err
+		t.Fail(err.Error())
 	}
 
 	// Test dupe
 	err = keychain.AddItem(item)
 	if err != keychain.ErrorDuplicateItem {
-		return fmt.Errorf("Should error with duplicate item")
+		t.Fail("Should error with duplicate item")
 	}
 
 	// Test add another
 	err = keychain.AddItem(item2)
 	if err != nil {
-		return err
+		t.Fail(err.Error())
 	}
 
 	// Test querying attributes
-	query := keychain.NewGenericPassword(service, account, "", nil, accessGroup)
+	query := keychain.NewItem()
+	query.SetSecClass(keychain.SecClassGenericPassword)
+	query.SetService(service)
+	query.SetAccount(account)
+	query.SetAccessGroup(accessGroup)
 	query.SetMatchLimit(keychain.MatchLimitAll)
 	query.SetReturnAttributes(true)
 	results, err := keychain.QueryItem(query)
 	if err != nil {
-		return err
+		t.Fail(err.Error())
 	}
 
 	if len(results) != 1 {
-		return fmt.Errorf("Invalid results count: %d", len(results))
+		t.Fail(fmt.Sprintf("Invalid results count: %d", len(results)))
 	}
 
 	if results[0].Service != service {
-		return fmt.Errorf("Invalid service, %v != %v, %v", results[0].Service, service, results)
+		t.Fail(fmt.Sprintf("Invalid service, %v != %v, %v", results[0].Service, service, results))
 	}
 
 	if results[0].Account != account {
-		return fmt.Errorf("Invalid account, %v != %v, %v", results[0].Account, account, results)
+		t.Fail(fmt.Sprintf("Invalid account, %v != %v, %v", results[0].Account, account, results))
 	}
 
 	if len(results[0].Data) != 0 {
-		return fmt.Errorf("Password shouldn't come back when returning attributes")
+		t.Fail("Password shouldn't come back when returning attributes")
 	}
 
 	// Test querying data
-	password, err := keychain.GetGenericPassword(service, account, "", accessGroup)
+	queryData := keychain.NewItem()
+	queryData.SetSecClass(keychain.SecClassGenericPassword)
+	queryData.SetService(service)
+	queryData.SetAccount(account)
+	queryData.SetAccessGroup(accessGroup)
+	queryData.SetMatchLimit(keychain.MatchLimitOne)
+	queryData.SetReturnData(true)
+	resultsData, err := keychain.QueryItem(queryData)
 	if err != nil {
-		return err
+		t.Fail(err.Error())
 	}
 
-	if string(password) != "toomanysecrets" {
-		return fmt.Errorf("Invalid password")
+	if len(resultsData) != 1 {
+		t.Fail("Too many results")
+	}
+
+	if string(resultsData[0].Data) != "toomanysecrets" {
+		t.Fail("Invalid password")
 	}
 
 	// Test account names
-	accounts2, err := keychain.GetAccountsForService(service)
+	accounts2, err := keychain.GetGenericPasswordAccounts(service)
 	if err != nil {
-		return err
+		t.Fail(err.Error())
 	}
 	if len(accounts2) != 2 {
-		return fmt.Errorf("Should have 2 accounts: %v", accounts2)
+		t.Fail(fmt.Sprintf("Should have 2 accounts: %v", accounts2))
 	}
 
 	if !reflect.DeepEqual(accounts2, []string{account, account2}) {
-		return fmt.Errorf("Invalid accounts: %v", accounts2)
+		t.Fail(fmt.Sprintf("Invalid accounts: %v", accounts2))
 	}
 
 	// Remove
-	queryDel := keychain.NewGenericPassword(service, account, "", nil, accessGroup)
-	queryDel.SetMatchLimit(keychain.MatchLimitAll)
+	queryDel := keychain.NewItem()
+	queryDel.SetSecClass(keychain.SecClassGenericPassword)
+	queryDel.SetService(service)
+	queryDel.SetAccount(account)
+	queryDel.SetAccessGroup(accessGroup)
 	err = keychain.DeleteItem(queryDel)
 	if err != nil {
-		return err
+		t.Fail(err.Error())
 	}
 
 	// Test removed
-	query3 := keychain.NewGenericPassword(service, account, "", nil, accessGroup)
+	query3 := keychain.NewItem()
+	query3.SetService(service)
+	query3.SetAccount(account)
+	query3.SetAccessGroup(accessGroup)
 	query3.SetMatchLimit(keychain.MatchLimitAll)
 	query3.SetReturnAttributes(true)
 	results3, err := keychain.QueryItem(query3)
 
 	if len(results3) != 0 {
-		return fmt.Errorf("Results should have been empty")
+		t.Fail("Results should have been empty")
 	}
 
-	accounts3, err := keychain.GetAccountsForService(service)
+	accounts3, err := keychain.GetGenericPasswordAccounts(service)
 	if err != nil {
-		return err
+		t.Fail(err.Error())
 	}
 	if len(accounts3) != 1 {
-		return fmt.Errorf("Should have an account")
+		t.Fail("Should have an account")
 	}
 
 	// Test remove not found
 	err = keychain.DeleteItem(item)
 	if err != keychain.ErrorItemNotFound {
-		return fmt.Errorf("Error should be not found")
+		t.Fail("Error should be not found")
 	}
-
-	return nil
 }

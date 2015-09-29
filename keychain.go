@@ -148,8 +148,48 @@ var ReturnDataKey = attrKey(C.CFTypeRef(C.kSecReturnData))
 
 // Item for adding, querying or deleting.
 type Item struct {
-	// Values can be string, []byte or CFTypeRef (constant).
+	// Values can be string, []byte, Convertable or CFTypeRef (constant).
 	attr map[string]interface{}
+}
+
+type Convertable interface {
+	Convert() (C.CFTypeRef, error)
+}
+
+func (k *Item) SetSecClass(sc SecClass) {
+	k.attr[SecClassKey] = secClassTypeRef[sc]
+}
+
+func (k *Item) SetString(key string, s string) {
+	if s != "" {
+		k.attr[key] = s
+	} else {
+		delete(k.attr, key)
+	}
+}
+
+func (k *Item) SetService(s string) {
+	k.SetString(ServiceKey, s)
+}
+
+func (k *Item) SetAccount(a string) {
+	k.SetString(AccountKey, a)
+}
+
+func (k *Item) SetLabel(l string) {
+	k.SetString(LabelKey, l)
+}
+
+func (k *Item) SetData(b []byte) {
+	if b != nil {
+		k.attr[DataKey] = b
+	} else {
+		delete(k.attr, DataKey)
+	}
+}
+
+func (k *Item) SetAccessGroup(ag string) {
+	k.SetString(AccessGroupKey, ag)
 }
 
 func (k *Item) SetSynchronizable(sync Synchronizable) {
@@ -184,33 +224,21 @@ func (k *Item) SetReturnData(b bool) {
 	k.attr[ReturnDataKey] = b
 }
 
-// NewGenericPassword creates password Item for a generic password.
+// NewItem is a new empty keychain item.
+func NewItem() Item {
+	return Item{make(map[string]interface{})}
+}
+
+// NewGenericPassword creates a generic password item. This is a convenience method.
 func NewGenericPassword(service string, account string, label string, data []byte, accessGroup string) Item {
-	attr := map[string]interface{}{
-		SecClassKey: secClassTypeRef[SecClassGenericPassword],
-	}
-
-	if account != "" {
-		attr[AccountKey] = account
-	}
-
-	if service != "" {
-		attr[ServiceKey] = service
-	}
-
-	if data != nil {
-		attr[DataKey] = data
-	}
-
-	if label != "" {
-		attr[LabelKey] = label
-	}
-
-	if accessGroup != "" {
-		attr[AccessGroupKey] = accessGroup
-	}
-
-	return Item{attr: attr}
+	item := NewItem()
+	item.SetSecClass(SecClassGenericPassword)
+	item.SetService(service)
+	item.SetAccount(account)
+	item.SetLabel(label)
+	item.SetData(data)
+	item.SetAccessGroup(accessGroup)
+	return item
 }
 
 // AddItem adds a Item
@@ -227,7 +255,7 @@ func AddItem(item Item) error {
 }
 
 // QueryResult stores all possible results from queries.
-// Not all fields all applicable all the time. Results depend on query.
+// Not all fields are applicable all the time. Results depend on query.
 type QueryResult struct {
 	Service     string
 	Account     string
@@ -324,14 +352,13 @@ func convertResult(d C.CFDictionaryRef) (*QueryResult, error) {
 	return &result, nil
 }
 
-// DeleteGenericPasswordItem removes a generic password item
+// DeleteGenericPasswordItem removes a generic password item.
 func DeleteGenericPasswordItem(service string, account string) error {
-	attr := map[string]interface{}{
-		SecClassKey: secClassTypeRef[SecClassGenericPassword],
-		ServiceKey:  service,
-		AccountKey:  account,
-	}
-	return DeleteItem(Item{attr: attr})
+	item := NewItem()
+	item.SetSecClass(SecClassGenericPassword)
+	item.SetService(service)
+	item.SetAccount(account)
+	return DeleteItem(item)
 }
 
 // DeleteItem removes a Item
@@ -346,9 +373,16 @@ func DeleteItem(item Item) error {
 	return checkError(errCode)
 }
 
-// GetAccounts returns accounts for service. This is a convenience method.
+// Deprecated
 func GetAccountsForService(service string) ([]string, error) {
-	query := NewGenericPassword(service, "", "", nil, "")
+	return GetGenericPasswordAccounts(service)
+}
+
+// GetGenericPasswordAccounts returns generic password accounts for service. This is a convenience method.
+func GetGenericPasswordAccounts(service string) ([]string, error) {
+	query := NewItem()
+	query.SetSecClass(SecClassGenericPassword)
+	query.SetService(service)
 	query.SetMatchLimit(MatchLimitAll)
 	query.SetReturnAttributes(true)
 	results, err := QueryItem(query)
@@ -366,7 +400,12 @@ func GetAccountsForService(service string) ([]string, error) {
 
 // GetGenericPassword returns password data for service and account. This is a convenience method.
 func GetGenericPassword(service string, account string, label string, accessGroup string) ([]byte, error) {
-	query := NewGenericPassword(service, account, label, nil, accessGroup)
+	query := NewItem()
+	query.SetSecClass(SecClassGenericPassword)
+	query.SetService(service)
+	query.SetAccount(account)
+	query.SetLabel(label)
+	query.SetAccessGroup(accessGroup)
 	query.SetMatchLimit(MatchLimitOne)
 	query.SetReturnData(true)
 	results, err := QueryItem(query)
@@ -411,6 +450,13 @@ func convertAttr(attr map[string]interface{}) (C.CFDictionaryRef, error) {
 				return nil, err
 			}
 			valueRef = C.CFTypeRef(stringRef)
+			defer C.CFRelease(valueRef)
+		case Convertable:
+			convertedRef, err := (i.(Convertable)).Convert()
+			if err != nil {
+				return nil, err
+			}
+			valueRef = C.CFTypeRef(convertedRef)
 			defer C.CFRelease(valueRef)
 		}
 		keyRef, err := stringToCFString(key)
@@ -524,4 +570,18 @@ func cfStringToString(s C.CFStringRef) string {
 	var usedBufLen C.CFIndex
 	_ = C.CFStringGetBytes(s, C.CFRange{0, length}, C.kCFStringEncodingUTF8, C.UInt8(0), C.false, (*C.UInt8)(&buf[0]), maxBufLen, &usedBufLen)
 	return string(buf[:usedBufLen])
+}
+
+// The returned CFArrayRef, if non-nil, must be released via CFRelease.
+func arrayToCFArray(a []C.CFTypeRef) C.CFArrayRef {
+	var values []unsafe.Pointer
+	for _, value := range a {
+		values = append(values, unsafe.Pointer(value))
+	}
+	numValues := len(values)
+	var valuesPointer *unsafe.Pointer
+	if numValues > 0 {
+		valuesPointer = &values[0]
+	}
+	return C.CFArrayCreate(nil, valuesPointer, C.CFIndex(numValues), &C.kCFTypeArrayCallBacks)
 }

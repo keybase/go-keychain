@@ -8,10 +8,14 @@
 
 #include <Foundation/Foundation.h>
 
-FOUNDATION_EXPORT BOOL GoBindAddGenericPassword(NSString* service, NSString* account, NSString* label, NSString* accessGroup, NSString* password, NSError** error);
+@protocol GoBindTest
+- (void)Fail:(NSString*)s;
+@end
 
-FOUNDATION_EXPORT BOOL GoBindDeleteGenericPassword(NSString* service, NSString* account, NSString* label, NSString* accessGroup, NSError** error);
+FOUNDATION_EXPORT BOOL GoBindAddGenericPassword(NSString* service, NSString* account, NSString* label, NSString* password, NSString* accessGroup, NSError** error);
 
-FOUNDATION_EXPORT BOOL GoBindTestGenericPassword(NSString* service, NSString* accessGroup, NSError** error);
+FOUNDATION_EXPORT BOOL GoBindDeleteGenericPassword(NSString* service, NSString* account, NSString* accessGroup, NSError** error);
+
+FOUNDATION_EXPORT void GoBindGenericPasswordTest(id<GoBindTest> t, NSString* service, NSString* accessGroup);
 
 #endif
