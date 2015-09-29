@@ -6,6 +6,8 @@ Requires Mac OSX 9 or greater and iOS 7 or greater.
 
 ## Usage
 
+The API is meant to mirror the Keychain API and is not necessarily idiomatic go.
+
 #### Add Item
 
 ```go
