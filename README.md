@@ -9,7 +9,8 @@ Requires Mac OSX 9 or greater and iOS 7 or greater.
 ## Usage
 
 ```go
-item := keychain.NewGenericPassword("MyService", "gabriel", "A label", []byte("toomanysecrets"), "com.corp")
+// Create generic password item with service, account, label, password, access group
+item := keychain.NewGenericPassword("MyService", "gabriel", "A label", []byte("toomanysecrets"), "A123456789.group.com.mycorp")
 item.SetSynchronizable(keychain.SynchronizableNo)
 item.SetAccessible(keychain.AccessibleWhenUnlocked)
 err := keychain.AddItem(item)
@@ -27,13 +28,11 @@ if err == keychain.ErrorNotFound {
 ```
 
 
-## Tests
-
-Tests are in `bind`.
-
 ## iOS
 
 Bindable package in `bind`. iOS project in `ios`. Run that project to test iOS.
+
+To re-generate framework:
 
 ```
 gomobile bind -target=ios -o ios/bind.framework github.com/keybase/go-keychain/bind
