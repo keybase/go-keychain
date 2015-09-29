@@ -4,8 +4,6 @@ A library for accessing the Keychain for OSX and iOS.
 
 Requires Mac OSX 9 or greater and iOS 7 or greater.
 
-**WARNING**: This is still being tested and reviewed.
-
 ## Usage
 
 #### Add Item
@@ -40,7 +38,13 @@ query.SetAccessGroup(accessGroup)
 query.SetMatchLimit(keychain.MatchLimitAll)
 query.SetReturnAttributes(true)
 results, err := keychain.QueryItem(query)
-
+if err != nil {
+  // Error
+} else {
+  for _, r := range results {
+    fmt.Printf("%#v\n", r)
+  }
+}
 ```
 
 Query for a single result, returning data:
