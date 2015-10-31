@@ -132,7 +132,7 @@ func ArrayToCFArray(a []C.CFTypeRef) C.CFArrayRef {
 	return C.CFArrayCreate(nil, valuesPointer, C.CFIndex(numValues), &C.kCFTypeArrayCallBacks)
 }
 
-// CFArrayToArray converts a CFArrayRef to an array.
+// CFArrayToArray converts a CFArrayRef to an array of CFTypes.
 func CFArrayToArray(cfArray C.CFArrayRef) (a []C.CFTypeRef) {
 	count := C.CFArrayGetCount(cfArray)
 	if count > 0 {
@@ -206,4 +206,56 @@ func CFTypeDescription(ref C.CFTypeRef) string {
 	typeDesc := C.CFCopyTypeIDDescription(typeID)
 	defer Release(C.CFTypeRef(typeDesc))
 	return CFStringToString(typeDesc)
+}
+
+// Convert converts a CFTypeRef to a go instance.
+func Convert(ref C.CFTypeRef) (interface{}, error) {
+	typeID := C.CFGetTypeID(ref)
+	if typeID == C.CFStringGetTypeID() {
+		return CFStringToString(C.CFStringRef(ref)), nil
+	} else if typeID == C.CFDictionaryGetTypeID() {
+		return ConvertCFDictionary(C.CFDictionaryRef(ref))
+	} else if typeID == C.CFArrayGetTypeID() {
+		arr := CFArrayToArray(C.CFArrayRef(ref))
+		results := make([]interface{}, 0, len(arr))
+		for _, ref := range arr {
+			v, err := Convert(ref)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, v)
+			return results, nil
+		}
+	} else if typeID == C.CFDataGetTypeID() {
+		b, err := CFDataToBytes(C.CFDataRef(ref))
+		if err != nil {
+			return nil, err
+		}
+		return b, nil
+	} else if typeID == C.CFNumberGetTypeID() {
+		return 0, nil // TODO
+	} else if typeID == C.CFBooleanGetTypeID() {
+		return C.CFBooleanGetValue(C.CFBooleanRef(ref)), nil
+	}
+
+	return nil, fmt.Errorf("Invalid type: %s", CFTypeDescription(ref))
+}
+
+// ConvertCFDictionary converts a CFDictionary to map (deep).
+func ConvertCFDictionary(d C.CFDictionaryRef) (map[interface{}]interface{}, error) {
+	m := CFDictionaryToMap(C.CFDictionaryRef(d))
+	result := make(map[interface{}]interface{})
+
+	for k, v := range m {
+		gk, err := Convert(k)
+		if err != nil {
+			return nil, err
+		}
+		gv, err := Convert(v)
+		if err != nil {
+			return nil, err
+		}
+		result[gk] = gv
+	}
+	return result, nil
 }
