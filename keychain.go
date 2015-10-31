@@ -13,10 +13,7 @@ package keychain
 #include <Security/Security.h>
 */
 import "C"
-import (
-	"fmt"
-	"reflect"
-)
+import "fmt"
 
 type Error int
 
@@ -148,10 +145,6 @@ type Item struct {
 	attr map[string]interface{}
 }
 
-type Convertable interface {
-	Convert() (C.CFTypeRef, error)
-}
-
 func (k *Item) SetSecClass(sc SecClass) {
 	k.attr[SecClassKey] = secClassTypeRef[sc]
 }
@@ -239,7 +232,7 @@ func NewGenericPassword(service string, account string, label string, data []byt
 
 // AddItem adds a Item
 func AddItem(item Item) error {
-	cfDict, err := convertAttr(item.attr)
+	cfDict, err := ConvertMapToCFDictionary(item.attr)
 	if err != nil {
 		return err
 	}
@@ -262,7 +255,7 @@ type QueryResult struct {
 
 // QueryItem returns a list of query results.
 func QueryItem(item Item) ([]QueryResult, error) {
-	cfDict, err := convertAttr(item.attr)
+	cfDict, err := ConvertMapToCFDictionary(item.attr)
 	if err != nil {
 		return nil, err
 	}
@@ -305,17 +298,10 @@ func QueryItem(item Item) ([]QueryResult, error) {
 		item := QueryResult{Data: b}
 		results = append(results, item)
 	} else {
-		return nil, fmt.Errorf("Invalid result type: %s", cfTypeDescription(resultsRef))
+		return nil, fmt.Errorf("Invalid result type: %s", CFTypeDescription(resultsRef))
 	}
 
 	return results, nil
-}
-
-func cfTypeDescription(ref C.CFTypeRef) string {
-	typeID := C.CFGetTypeID(ref)
-	typeDesc := C.CFCopyTypeIDDescription(typeID)
-	defer Release(C.CFTypeRef(typeDesc))
-	return CFStringToString(typeDesc)
 }
 
 func attrKey(ref C.CFTypeRef) string {
@@ -359,7 +345,7 @@ func DeleteGenericPasswordItem(service string, account string) error {
 
 // DeleteItem removes a Item
 func DeleteItem(item Item) error {
-	cfDict, err := convertAttr(item.attr)
+	cfDict, err := ConvertMapToCFDictionary(item.attr)
 	if err != nil {
 		return err
 	}
@@ -415,56 +401,4 @@ func GetGenericPassword(service string, account string, label string, accessGrou
 		return results[0].Data, nil
 	}
 	return nil, nil
-}
-
-// Covert attributes to CFDictionaryRef. You need to release the result.
-func convertAttr(attr map[string]interface{}) (C.CFDictionaryRef, error) {
-	m := make(map[C.CFTypeRef]C.CFTypeRef)
-	for key, i := range attr {
-		var valueRef C.CFTypeRef
-		switch i.(type) {
-		default:
-			return nil, fmt.Errorf("Unsupported value type for keychain item: %v", reflect.TypeOf(i))
-		case C.CFTypeRef:
-			valueRef = i.(C.CFTypeRef)
-		case bool:
-			if i == true {
-				valueRef = C.CFTypeRef(C.kCFBooleanTrue)
-			} else {
-				valueRef = C.CFTypeRef(C.kCFBooleanFalse)
-			}
-		case []byte:
-			bytesRef, err := BytesToCFData(i.([]byte))
-			if err != nil {
-				return nil, err
-			}
-			valueRef = C.CFTypeRef(bytesRef)
-			defer Release(valueRef)
-		case string:
-			stringRef, err := StringToCFString(i.(string))
-			if err != nil {
-				return nil, err
-			}
-			valueRef = C.CFTypeRef(stringRef)
-			defer Release(valueRef)
-		case Convertable:
-			convertedRef, err := (i.(Convertable)).Convert()
-			if err != nil {
-				return nil, err
-			}
-			valueRef = C.CFTypeRef(convertedRef)
-			defer Release(valueRef)
-		}
-		keyRef, err := StringToCFString(key)
-		if err != nil {
-			return nil, err
-		}
-		m[C.CFTypeRef(keyRef)] = valueRef
-	}
-
-	cfDict, err := MapToCFDictionary(m)
-	if err != nil {
-		return nil, err
-	}
-	return cfDict, nil
 }

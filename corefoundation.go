@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"unicode/utf8"
 	"unsafe"
 )
@@ -139,4 +140,70 @@ func CFArrayToArray(cfArray C.CFArrayRef) (a []C.CFTypeRef) {
 		C.CFArrayGetValues(cfArray, C.CFRange{0, count}, (*unsafe.Pointer)(&a[0]))
 	}
 	return
+}
+
+// Convertable knows how to convert an instance to a CFTypeRef.
+type Convertable interface {
+	Convert() (C.CFTypeRef, error)
+}
+
+// ConvertMapToCFDictionary converts a map to a CFDictionary and if non-nil,
+// must be released with Release(ref).
+func ConvertMapToCFDictionary(attr map[string]interface{}) (C.CFDictionaryRef, error) {
+	m := make(map[C.CFTypeRef]C.CFTypeRef)
+	for key, i := range attr {
+		var valueRef C.CFTypeRef
+		switch i.(type) {
+		default:
+			return nil, fmt.Errorf("Unsupported value type: %v", reflect.TypeOf(i))
+		case C.CFTypeRef:
+			valueRef = i.(C.CFTypeRef)
+		case bool:
+			if i == true {
+				valueRef = C.CFTypeRef(C.kCFBooleanTrue)
+			} else {
+				valueRef = C.CFTypeRef(C.kCFBooleanFalse)
+			}
+		case []byte:
+			bytesRef, err := BytesToCFData(i.([]byte))
+			if err != nil {
+				return nil, err
+			}
+			valueRef = C.CFTypeRef(bytesRef)
+			defer Release(valueRef)
+		case string:
+			stringRef, err := StringToCFString(i.(string))
+			if err != nil {
+				return nil, err
+			}
+			valueRef = C.CFTypeRef(stringRef)
+			defer Release(valueRef)
+		case Convertable:
+			convertedRef, err := (i.(Convertable)).Convert()
+			if err != nil {
+				return nil, err
+			}
+			valueRef = C.CFTypeRef(convertedRef)
+			defer Release(valueRef)
+		}
+		keyRef, err := StringToCFString(key)
+		if err != nil {
+			return nil, err
+		}
+		m[C.CFTypeRef(keyRef)] = valueRef
+	}
+
+	cfDict, err := MapToCFDictionary(m)
+	if err != nil {
+		return nil, err
+	}
+	return cfDict, nil
+}
+
+// CFTypeDescription returns type string for CFTypeRef.
+func CFTypeDescription(ref C.CFTypeRef) string {
+	typeID := C.CFGetTypeID(ref)
+	typeDesc := C.CFCopyTypeIDDescription(typeID)
+	defer Release(C.CFTypeRef(typeDesc))
+	return CFStringToString(typeDesc)
 }
