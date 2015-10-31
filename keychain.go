@@ -14,12 +14,8 @@ package keychain
 */
 import "C"
 import (
-	"errors"
 	"fmt"
-	"math"
 	"reflect"
-	"unicode/utf8"
-	"unsafe"
 )
 
 type Error int
@@ -247,7 +243,7 @@ func AddItem(item Item) error {
 	if err != nil {
 		return err
 	}
-	defer C.CFRelease(C.CFTypeRef(cfDict))
+	defer Release(C.CFTypeRef(cfDict))
 
 	errCode := C.SecItemAdd(cfDict, nil)
 	err = checkError(errCode)
@@ -270,7 +266,7 @@ func QueryItem(item Item) ([]QueryResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer C.CFRelease(C.CFTypeRef(cfDict))
+	defer Release(C.CFTypeRef(cfDict))
 
 	var resultsRef C.CFTypeRef
 	errCode := C.SecItemCopyMatching(cfDict, &resultsRef)
@@ -281,13 +277,13 @@ func QueryItem(item Item) ([]QueryResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer C.CFRelease(resultsRef)
+	defer Release(resultsRef)
 
 	results := make([]QueryResult, 0, 1)
 
 	typeID := C.CFGetTypeID(resultsRef)
 	if typeID == C.CFArrayGetTypeID() {
-		arr := cfArrayToArray(C.CFArrayRef(resultsRef))
+		arr := CFArrayToArray(C.CFArrayRef(resultsRef))
 		for _, dictRef := range arr {
 			item, err := convertResult(C.CFDictionaryRef(dictRef))
 			if err != nil {
@@ -302,7 +298,7 @@ func QueryItem(item Item) ([]QueryResult, error) {
 		}
 		results = append(results, *item)
 	} else if typeID == C.CFDataGetTypeID() {
-		b, err := cfDataToBytes(C.CFDataRef(resultsRef))
+		b, err := CFDataToBytes(C.CFDataRef(resultsRef))
 		if err != nil {
 			return nil, err
 		}
@@ -318,29 +314,29 @@ func QueryItem(item Item) ([]QueryResult, error) {
 func cfTypeDescription(ref C.CFTypeRef) string {
 	typeID := C.CFGetTypeID(ref)
 	typeDesc := C.CFCopyTypeIDDescription(typeID)
-	defer C.CFRelease(C.CFTypeRef(typeDesc))
-	return cfStringToString(typeDesc)
+	defer Release(C.CFTypeRef(typeDesc))
+	return CFStringToString(typeDesc)
 }
 
 func attrKey(ref C.CFTypeRef) string {
-	return cfStringToString(C.CFStringRef(ref))
+	return CFStringToString(C.CFStringRef(ref))
 }
 
 func convertResult(d C.CFDictionaryRef) (*QueryResult, error) {
-	m := cfDictionaryToMap(C.CFDictionaryRef(d))
+	m := CFDictionaryToMap(C.CFDictionaryRef(d))
 	result := QueryResult{}
 	for k, v := range m {
 		switch attrKey(k) {
 		case ServiceKey:
-			result.Service = cfStringToString(C.CFStringRef(v))
+			result.Service = CFStringToString(C.CFStringRef(v))
 		case AccountKey:
-			result.Account = cfStringToString(C.CFStringRef(v))
+			result.Account = CFStringToString(C.CFStringRef(v))
 		case AccessGroupKey:
-			result.AccessGroup = cfStringToString(C.CFStringRef(v))
+			result.AccessGroup = CFStringToString(C.CFStringRef(v))
 		case LabelKey:
-			result.Label = cfStringToString(C.CFStringRef(v))
+			result.Label = CFStringToString(C.CFStringRef(v))
 		case DataKey:
-			b, err := cfDataToBytes(C.CFDataRef(v))
+			b, err := CFDataToBytes(C.CFDataRef(v))
 			if err != nil {
 				return nil, err
 			}
@@ -367,7 +363,7 @@ func DeleteItem(item Item) error {
 	if err != nil {
 		return err
 	}
-	defer C.CFRelease(C.CFTypeRef(cfDict))
+	defer Release(C.CFTypeRef(cfDict))
 
 	errCode := C.SecItemDelete(cfDict)
 	return checkError(errCode)
@@ -438,150 +434,37 @@ func convertAttr(attr map[string]interface{}) (C.CFDictionaryRef, error) {
 				valueRef = C.CFTypeRef(C.kCFBooleanFalse)
 			}
 		case []byte:
-			bytesRef, err := bytesToCFData(i.([]byte))
+			bytesRef, err := BytesToCFData(i.([]byte))
 			if err != nil {
 				return nil, err
 			}
 			valueRef = C.CFTypeRef(bytesRef)
-			defer C.CFRelease(valueRef)
+			defer Release(valueRef)
 		case string:
-			stringRef, err := stringToCFString(i.(string))
+			stringRef, err := StringToCFString(i.(string))
 			if err != nil {
 				return nil, err
 			}
 			valueRef = C.CFTypeRef(stringRef)
-			defer C.CFRelease(valueRef)
+			defer Release(valueRef)
 		case Convertable:
 			convertedRef, err := (i.(Convertable)).Convert()
 			if err != nil {
 				return nil, err
 			}
 			valueRef = C.CFTypeRef(convertedRef)
-			defer C.CFRelease(valueRef)
+			defer Release(valueRef)
 		}
-		keyRef, err := stringToCFString(key)
+		keyRef, err := StringToCFString(key)
 		if err != nil {
 			return nil, err
 		}
 		m[C.CFTypeRef(keyRef)] = valueRef
 	}
 
-	cfDict, err := mapToCFDictionary(m)
+	cfDict, err := MapToCFDictionary(m)
 	if err != nil {
 		return nil, err
 	}
 	return cfDict, nil
-}
-
-// The returned CFDataRef, if non-nil, must be released via CFRelease.
-func bytesToCFData(b []byte) (C.CFDataRef, error) {
-	if uint64(len(b)) > math.MaxUint32 {
-		return nil, errors.New("Data is too large")
-	}
-	var p *C.UInt8
-	if len(b) > 0 {
-		p = (*C.UInt8)(&b[0])
-	}
-	cfData := C.CFDataCreate(nil, p, C.CFIndex(len(b)))
-	if cfData == nil {
-		return nil, fmt.Errorf("CFDataCreate failed")
-	}
-	return cfData, nil
-}
-
-func cfDataToBytes(cfData C.CFDataRef) ([]byte, error) {
-	return C.GoBytes(unsafe.Pointer(C.CFDataGetBytePtr(cfData)), C.int(C.CFDataGetLength(cfData))), nil
-}
-
-// The returned CFDictionaryRef, if non-nil, must be released via CFRelease.
-func mapToCFDictionary(m map[C.CFTypeRef]C.CFTypeRef) (C.CFDictionaryRef, error) {
-	var keys, values []unsafe.Pointer
-	for key, value := range m {
-		keys = append(keys, unsafe.Pointer(key))
-		values = append(values, unsafe.Pointer(value))
-	}
-	numValues := len(values)
-	var keysPointer, valuesPointer *unsafe.Pointer
-	if numValues > 0 {
-		keysPointer = &keys[0]
-		valuesPointer = &values[0]
-	}
-	cfDict := C.CFDictionaryCreate(nil, keysPointer, valuesPointer, C.CFIndex(numValues), &C.kCFTypeDictionaryKeyCallBacks, &C.kCFTypeDictionaryValueCallBacks)
-	if cfDict == nil {
-		return nil, fmt.Errorf("CFDictionaryCreate failed")
-	}
-	return cfDict, nil
-}
-
-// The returned CFStringRef, if non-nil, must be released via CFRelease.
-func stringToCFString(s string) (C.CFStringRef, error) {
-	if !utf8.ValidString(s) {
-		return nil, errors.New("Invalid UTF-8 string")
-	}
-	if uint64(len(s)) > math.MaxUint32 {
-		return nil, errors.New("String is too large")
-	}
-
-	bytes := []byte(s)
-	var p *C.UInt8
-	if len(bytes) > 0 {
-		p = (*C.UInt8)(&bytes[0])
-	}
-	return C.CFStringCreateWithBytes(nil, p, C.CFIndex(len(s)), C.kCFStringEncodingUTF8, C.false), nil
-}
-
-func cfArrayToArray(cfArray C.CFArrayRef) (a []C.CFTypeRef) {
-	count := C.CFArrayGetCount(cfArray)
-	if count > 0 {
-		a = make([]C.CFTypeRef, count)
-		C.CFArrayGetValues(cfArray, C.CFRange{0, count}, (*unsafe.Pointer)(&a[0]))
-	}
-	return
-}
-
-func cfDictionaryToMap(cfDict C.CFDictionaryRef) (m map[C.CFTypeRef]C.CFTypeRef) {
-	count := C.CFDictionaryGetCount(cfDict)
-	if count > 0 {
-		keys := make([]C.CFTypeRef, count)
-		values := make([]C.CFTypeRef, count)
-		C.CFDictionaryGetKeysAndValues(cfDict, (*unsafe.Pointer)(&keys[0]), (*unsafe.Pointer)(&values[0]))
-		m = make(map[C.CFTypeRef]C.CFTypeRef, count)
-		for i := C.CFIndex(0); i < count; i++ {
-			m[keys[i]] = values[i]
-		}
-	}
-	return
-}
-
-func cfStringToString(s C.CFStringRef) string {
-	p := C.CFStringGetCStringPtr(s, C.kCFStringEncodingUTF8)
-	if p != nil {
-		return C.GoString(p)
-	}
-	length := C.CFStringGetLength(s)
-	if length == 0 {
-		return ""
-	}
-	maxBufLen := C.CFStringGetMaximumSizeForEncoding(length, C.kCFStringEncodingUTF8)
-	if maxBufLen == 0 {
-		return ""
-	}
-	buf := make([]byte, maxBufLen)
-	var usedBufLen C.CFIndex
-	_ = C.CFStringGetBytes(s, C.CFRange{0, length}, C.kCFStringEncodingUTF8, C.UInt8(0), C.false, (*C.UInt8)(&buf[0]), maxBufLen, &usedBufLen)
-	return string(buf[:usedBufLen])
-}
-
-// The returned CFArrayRef, if non-nil, must be released via CFRelease.
-func arrayToCFArray(a []C.CFTypeRef) C.CFArrayRef {
-	var values []unsafe.Pointer
-	for _, value := range a {
-		values = append(values, unsafe.Pointer(value))
-	}
-	numValues := len(values)
-	var valuesPointer *unsafe.Pointer
-	if numValues > 0 {
-		valuesPointer = &values[0]
-	}
-	return C.CFArrayCreate(nil, valuesPointer, C.CFIndex(numValues), &C.kCFTypeArrayCallBacks)
 }

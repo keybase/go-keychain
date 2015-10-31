@@ -12,7 +12,7 @@ func TestAccess(t *testing.T) {
 	var err error
 
 	item := keychain.NewGenericPassword("MyService", "test2", "A label", []byte("toomanysecrets2"), "")
-	//defer keychain.DeleteItem(item)
+	defer keychain.DeleteItem(item)
 
 	trustedApplications := []string{"/Applications/Mail.app"}
 	item.SetAccess(&keychain.Access{Label: "Mail", TrustedApplications: trustedApplications})
