@@ -233,9 +233,12 @@ func Convert(ref C.CFTypeRef) (interface{}, error) {
 		}
 		return b, nil
 	} else if typeID == C.CFNumberGetTypeID() {
-		return 0, nil // TODO
+		return CFNumberToInterface(C.CFNumberRef(ref)), nil
 	} else if typeID == C.CFBooleanGetTypeID() {
-		return C.CFBooleanGetValue(C.CFBooleanRef(ref)), nil
+		if C.CFBooleanGetValue(C.CFBooleanRef(ref)) != 0 {
+			return true, nil
+		}
+		return false, nil
 	}
 
 	return nil, fmt.Errorf("Invalid type: %s", CFTypeDescription(ref))
@@ -258,4 +261,77 @@ func ConvertCFDictionary(d C.CFDictionaryRef) (map[interface{}]interface{}, erro
 		result[gk] = gv
 	}
 	return result, nil
+}
+
+// CFNumberToInterface converts the CFNumberRef to the most appropriate numeric
+// type.
+// This code is from github.com/kballard/go-osx-plist.
+func CFNumberToInterface(cfNumber C.CFNumberRef) interface{} {
+	typ := C.CFNumberGetType(cfNumber)
+	switch typ {
+	case C.kCFNumberSInt8Type:
+		var sint C.SInt8
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&sint))
+		return int8(sint)
+	case C.kCFNumberSInt16Type:
+		var sint C.SInt16
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&sint))
+		return int16(sint)
+	case C.kCFNumberSInt32Type:
+		var sint C.SInt32
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&sint))
+		return int32(sint)
+	case C.kCFNumberSInt64Type:
+		var sint C.SInt64
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&sint))
+		return int64(sint)
+	case C.kCFNumberFloat32Type:
+		var float C.Float32
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&float))
+		return float32(float)
+	case C.kCFNumberFloat64Type:
+		var float C.Float64
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&float))
+		return float64(float)
+	case C.kCFNumberCharType:
+		var char C.char
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&char))
+		return byte(char)
+	case C.kCFNumberShortType:
+		var short C.short
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&short))
+		return int16(short)
+	case C.kCFNumberIntType:
+		var i C.int
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&i))
+		return int32(i)
+	case C.kCFNumberLongType:
+		var long C.long
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&long))
+		return int(long)
+	case C.kCFNumberLongLongType:
+		// This is the only type that may actually overflow us
+		var longlong C.longlong
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&longlong))
+		return int64(longlong)
+	case C.kCFNumberFloatType:
+		var float C.float
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&float))
+		return float32(float)
+	case C.kCFNumberDoubleType:
+		var double C.double
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&double))
+		return float64(double)
+	case C.kCFNumberCFIndexType:
+		// CFIndex is a long
+		var index C.CFIndex
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&index))
+		return int(index)
+	case C.kCFNumberNSIntegerType:
+		// We don't have a definition of NSInteger, but we know it's either an int or a long
+		var nsInt C.long
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&nsInt))
+		return int(nsInt)
+	}
+	panic("Unknown CFNumber type")
 }
