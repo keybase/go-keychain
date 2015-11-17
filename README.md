@@ -104,9 +104,9 @@ if err == keychain.ErrorNotFound {
 }
 ```
 
-### OSX
+### OS X
 
-Settings trusted applications for item (OSX only):
+Set a trusted applications for item (OS X only):
 
 ```go
 item := keychain.NewGenericPassword("MyService", "gabriel", "A label", []byte("toomanysecrets"), "A123456789.group.com.mycorp")
