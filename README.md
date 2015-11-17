@@ -2,7 +2,7 @@
 
 A library for accessing the Keychain for OSX and iOS.
 
-Requires Mac OSX 9 or greater and iOS 7 or greater.
+Requires OS X 10.9 or greater and iOS 8 or greater.
 
 ## Usage
 
