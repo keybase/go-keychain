@@ -11,7 +11,7 @@ import (
 func TestAccess(t *testing.T) {
 	var err error
 
-	item := keychain.NewGenericPassword("MyService", "test2", "A label", []byte("toomanysecrets2"), "")
+	item := keychain.NewGenericPassword("TestAccess", "test2", "A label", []byte("toomanysecrets2"), "")
 	defer keychain.DeleteItem(item)
 
 	trustedApplications := []string{"/Applications/Mail.app"}
@@ -19,5 +19,15 @@ func TestAccess(t *testing.T) {
 	err = keychain.AddItem(item)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestGetGenericPassword(t *testing.T) {
+	password, err := keychain.GetGenericPassword("TestGetGenericPassword", "test", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if password != nil {
+		t.Fatal("Should be nil")
 	}
 }

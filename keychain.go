@@ -370,6 +370,7 @@ func GetGenericPasswordAccounts(service string) ([]string, error) {
 }
 
 // GetGenericPassword returns password data for service and account. This is a convenience method.
+// If item is not found returns nil, nil.
 func GetGenericPassword(service string, account string, label string, accessGroup string) ([]byte, error) {
 	query := NewItem()
 	query.SetSecClass(SecClassGenericPassword)
