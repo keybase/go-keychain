@@ -34,8 +34,8 @@ Query for multiple results, returning attributes:
 ```go
 query := keychain.NewItem()
 query.SetSecClass(keychain.SecClassGenericPassword)
-query.setService(service)
-query.setAccount(account)
+query.SetService(service)
+query.SetAccount(account)
 query.SetAccessGroup(accessGroup)
 query.SetMatchLimit(keychain.MatchLimitAll)
 query.SetReturnAttributes(true)
