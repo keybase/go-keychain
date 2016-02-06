@@ -3,6 +3,8 @@
 package test
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/keybase/go-keychain"
@@ -56,4 +58,63 @@ func TestGenericPasswordRef(t *testing.T) {
 	if passwordAfter != nil {
 		t.Fatal("Shouldn't have password")
 	}
+}
+
+func TestAddingAndQueryingNewKeychain(t *testing.T) {
+	file := tmpKeychain(t)
+	defer os.Remove(file)
+
+	service, account, label, accessGroup, password := "TestAddingAndQueryingNewKeychain", "test", "", "", "toomanysecrets"
+
+	k, err := keychain.NewKeychain(file, "my password", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	item := keychain.NewGenericPassword(service, account, label, []byte(password), accessGroup)
+
+	// add to the default keychain
+	if err = keychain.AddItem(item); err != nil {
+		t.Fatal(err)
+	}
+
+	defer keychain.DeleteGenericPasswordItem(service, account)
+
+	item.UseKeychain(k)
+
+	// and then to the new keychain
+	if err = keychain.AddItem(item); err != nil {
+		t.Fatal(err)
+	}
+
+	query := keychain.NewItem()
+	query.SetSecClass(keychain.SecClassGenericPassword)
+	query.SetMatchSearchList(k)
+	query.SetService(service)
+	query.SetAccount(account)
+	query.SetLabel(label)
+	query.SetAccessGroup(accessGroup)
+	query.SetMatchLimit(keychain.MatchLimitOne)
+	query.SetReturnData(true)
+
+	results, err := keychain.QueryItem(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(results) != 1 {
+		t.Fatalf("Expected 1 result, got %d", len(results))
+	} else if string(results[0].Data) != password {
+		t.Fatalf("Expected password to be %s, got %s", password, results[0].Data)
+	}
+}
+
+func tmpKeychain(t *testing.T) (path string) {
+	file, err := ioutil.TempFile(os.TempDir(), "go-keychain-test")
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	os.Remove(file.Name())
+	return file.Name() + ".keychain"
 }
