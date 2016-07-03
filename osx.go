@@ -9,7 +9,10 @@ package keychain
 #include <Security/Security.h>
 */
 import "C"
-import "unsafe"
+import (
+	"os"
+	"unsafe"
+)
 
 var AccessibleKey = attrKey(C.CFTypeRef(C.kSecAttrAccessible))
 var accessibleTypeRef = map[Accessible]C.CFTypeRef{
@@ -106,4 +109,95 @@ func (k *Item) SetAccess(a *Access) {
 func DeleteItemRef(ref C.CFTypeRef) error {
 	errCode := C.SecKeychainItemDelete(C.SecKeychainItemRef(ref))
 	return checkError(errCode)
+}
+
+var (
+	KeychainKey = attrKey(C.CFTypeRef(C.kSecUseKeychain))
+
+	MatchSearchListKey = attrKey(C.CFTypeRef(C.kSecMatchSearchList))
+)
+
+// Keychain represents the path to a specific OSX keychain
+type Keychain struct {
+	path string
+}
+
+// NewKeychain creates a new keychain file with either a password, or a triggered prompt to the user
+func NewKeychain(path, password string, promptUser bool) (Keychain, error) {
+	pathRef := C.CString(path)
+	defer C.free(unsafe.Pointer(pathRef))
+
+	var errCode C.OSStatus
+	var kref C.SecKeychainRef
+
+	if promptUser {
+		errCode = C.SecKeychainCreate(pathRef, C.UInt32(0), nil, C.Boolean(1), nil, &kref)
+	} else {
+		passwordRef := C.CString(password)
+		defer C.free(unsafe.Pointer(passwordRef))
+		errCode = C.SecKeychainCreate(pathRef, C.UInt32(len(password)), unsafe.Pointer(passwordRef), C.Boolean(0), nil, &kref)
+	}
+
+	// TODO: Without passing in kref I get 'One or more parameters passed to the function were not valid (-50)'
+	defer Release(C.CFTypeRef(kref))
+
+	if err := checkError(errCode); err != nil {
+		return Keychain{}, err
+	}
+
+	return Keychain{path}, nil
+}
+
+// The returned SecKeychainRef, if non-nil, must be released via CFRelease.
+func openKeychainRef(path string) (C.SecKeychainRef, error) {
+	pathName := C.CString(path)
+	defer C.free(unsafe.Pointer(pathName))
+
+	var kref C.SecKeychainRef
+	if err := checkError(C.SecKeychainOpen(pathName, &kref)); err != nil {
+		return nil, err
+	}
+
+	return kref, nil
+}
+
+func (kc *Keychain) Delete() error {
+	return os.Remove(kc.path)
+}
+
+// The returned CFTypeRef, if non-nil, must be released via CFRelease.
+func (kc Keychain) Convert() (C.CFTypeRef, error) {
+	keyRef, err := openKeychainRef(kc.path)
+	return C.CFTypeRef(keyRef), err
+}
+
+type keychainArray []Keychain
+
+// The returned CFTypeRef, if non-nil, must be released via CFRelease.
+func (ka keychainArray) Convert() (C.CFTypeRef, error) {
+	var refs = make([]C.CFTypeRef, len(ka))
+	var err error
+
+	for idx, kc := range ka {
+		if refs[idx], err = kc.Convert(); err != nil {
+			for _, ref := range refs {
+				if ref != nil {
+					Release(ref)
+				}
+			}
+			return nil, err
+		}
+	}
+
+	return C.CFTypeRef(ArrayToCFArray(refs)), nil
+}
+
+// extensions of Item for OSX specific features
+
+func (k *Item) SetMatchSearchList(karr ...Keychain) {
+	k.attr[MatchSearchListKey] = keychainArray(karr)
+}
+
+func (k *Item) UseKeychain(kc Keychain) {
+	k.attr[KeychainKey] = kc
 }

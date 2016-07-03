@@ -13,11 +13,7 @@ package keychain
 #include <Security/Security.h>
 */
 import "C"
-import (
-	"fmt"
-	"os"
-	"unsafe"
-)
+import "fmt"
 
 type Error int
 
@@ -84,7 +80,6 @@ var (
 	AccountKey     = attrKey(C.CFTypeRef(C.kSecAttrAccount))
 	AccessGroupKey = attrKey(C.CFTypeRef(C.kSecAttrAccessGroup))
 	DataKey        = attrKey(C.CFTypeRef(C.kSecValueData))
-	KeychainKey    = attrKey(C.CFTypeRef(C.kSecUseKeychain))
 )
 
 type Synchronizable int
@@ -130,86 +125,9 @@ var matchTypeRef = map[MatchLimit]C.CFTypeRef{
 	MatchLimitAll: C.CFTypeRef(C.kSecMatchLimitAll),
 }
 
-var MatchSearchList = attrKey(C.CFTypeRef(C.kSecMatchSearchList))
-
 var ReturnAttributesKey = attrKey(C.CFTypeRef(C.kSecReturnAttributes))
 var ReturnDataKey = attrKey(C.CFTypeRef(C.kSecReturnData))
 var ReturnRefKey = attrKey(C.CFTypeRef(C.kSecReturnRef))
-
-// Keychain represents a specific OSX Keychain
-type Keychain struct {
-	// path is where the keychain is stored
-	path string
-}
-
-var DefaultKeychain *Keychain
-
-// NewKeychain creates a new keychain file with either a password, or a triggered prompt to the user
-func NewKeychain(path, password string, promptUser bool) (*Keychain, error) {
-	pathRef := C.CString(path)
-	defer C.free(unsafe.Pointer(pathRef))
-
-	var errCode C.OSStatus
-	var kref C.SecKeychainRef
-
-	if promptUser {
-		errCode = C.SecKeychainCreate(pathRef, C.UInt32(0), nil, C.Boolean(1), nil, &kref)
-	} else {
-		passwordRef := C.CString(password)
-		defer C.free(unsafe.Pointer(passwordRef))
-		errCode = C.SecKeychainCreate(pathRef, C.UInt32(len(password)), unsafe.Pointer(passwordRef), C.Boolean(0), nil, &kref)
-	}
-
-	// TODO: Without passing in kref I get 'One or more parameters passed to the function were not valid (-50)'
-	defer Release(C.CFTypeRef(kref))
-
-	if err := checkError(errCode); err != nil {
-		return nil, err
-	}
-
-	return &Keychain{path: path}, nil
-}
-
-func openKeychainRef(path string) (C.SecKeychainRef, error) {
-	pathName := C.CString(path)
-	defer C.free(unsafe.Pointer(pathName))
-
-	var kref C.SecKeychainRef
-	if err := checkError(C.SecKeychainOpen(pathName, &kref)); err != nil {
-		return nil, err
-	}
-
-	return kref, nil
-}
-
-func (kc *Keychain) Delete() error {
-	return os.Remove(kc.path)
-}
-
-func (kc *Keychain) Convert() (C.CFTypeRef, error) {
-	keyRef, err := openKeychainRef(kc.path)
-	return C.CFTypeRef(keyRef), err
-}
-
-type keychainArray []*Keychain
-
-func (ka keychainArray) Convert() (C.CFTypeRef, error) {
-	var refs []C.CFTypeRef = make([]C.CFTypeRef, len([]*Keychain(ka)))
-	var err error
-
-	for idx, kc := range ka {
-		if refs[idx], err = kc.Convert(); err != nil {
-			for _, ref := range refs {
-				if ref != nil {
-					Release(ref)
-				}
-			}
-			return nil, err
-		}
-	}
-
-	return C.CFTypeRef(ArrayToCFArray(refs)), nil
-}
 
 // Item for adding, querying or deleting.
 type Item struct {
@@ -287,14 +205,6 @@ func (k *Item) SetReturnData(b bool) {
 
 func (k *Item) SetReturnRef(b bool) {
 	k.attr[ReturnRefKey] = b
-}
-
-func (k *Item) SetMatchSearchList(karr ...*Keychain) {
-	k.attr[MatchSearchList] = keychainArray(karr)
-}
-
-func (k *Item) UseKeychain(kc *Keychain) {
-	k.attr[KeychainKey] = kc
 }
 
 // NewItem is a new empty keychain item.
