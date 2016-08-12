@@ -237,6 +237,19 @@ func AddItem(item Item) error {
 	return err
 }
 
+// UpdateItem updates a Item
+func UpdateItem(item Item) error {
+	cfDict, err := ConvertMapToCFDictionary(item.attr)
+	if err != nil {
+		return err
+	}
+	defer Release(C.CFTypeRef(cfDict))
+
+	errCode := C.SecItemUpdate(cfDict, cfDict)
+	err = checkError(errCode)
+	return err
+}
+
 // QueryResult stores all possible results from queries.
 // Not all fields are applicable all the time. Results depend on query.
 type QueryResult struct {
