@@ -237,15 +237,19 @@ func AddItem(item Item) error {
 	return err
 }
 
-// UpdateItem updates a Item
-func UpdateItem(item Item) error {
-	cfDict, err := ConvertMapToCFDictionary(item.attr)
+// UpdateItem updates the queryItem with the Parameters from updateItem
+func UpdateItem(queryItem Item, updateItem Item) error {
+	cfDict, err := ConvertMapToCFDictionary(queryItem.attr)
 	if err != nil {
 		return err
 	}
 	defer Release(C.CFTypeRef(cfDict))
-
-	errCode := C.SecItemUpdate(cfDict, cfDict)
+	cfDictUpdate, err := ConvertMapToCFDictionary(updateItem.attr)
+	if err != nil {
+		return err
+	}
+	defer Release(C.CFTypeRef(cfDictUpdate))
+	errCode := C.SecItemUpdate(cfDict, cfDictUpdate)
 	err = checkError(errCode)
 	return err
 }
