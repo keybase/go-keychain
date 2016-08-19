@@ -15,18 +15,28 @@ package keychain
 import "C"
 import "fmt"
 
+// Error defines keychain errors
 type Error int
 
 var (
-	ErrorUnimplemented         Error = Error(C.errSecUnimplemented)
-	ErrorParam                       = Error(C.errSecParam)
-	ErrorAllocate                    = Error(C.errSecAllocate)
-	ErrorNotAvailable                = Error(C.errSecNotAvailable)
-	ErrorAuthFailed                  = Error(C.errSecAuthFailed)
-	ErrorDuplicateItem               = Error(C.errSecDuplicateItem)
-	ErrorItemNotFound                = Error(C.errSecItemNotFound)
-	ErrorInteractionNotAllowed       = Error(C.errSecInteractionNotAllowed)
-	ErrorDecode                      = Error(C.errSecDecode)
+	// ErrorUnimplemented corresponds to errSecUnimplemented result code
+	ErrorUnimplemented = Error(C.errSecUnimplemented)
+	// ErrorParam corresponds to errSecParam result code
+	ErrorParam = Error(C.errSecParam)
+	// ErrorAllocate corresponds to errSecAllocate result code
+	ErrorAllocate = Error(C.errSecAllocate)
+	// ErrorNotAvailable corresponds to errSecNotAvailable result code
+	ErrorNotAvailable = Error(C.errSecNotAvailable)
+	// ErrorAuthFailed corresponds to errSecAuthFailed result code
+	ErrorAuthFailed = Error(C.errSecAuthFailed)
+	// ErrorDuplicateItem corresponds to errSecDuplicateItem result code
+	ErrorDuplicateItem = Error(C.errSecDuplicateItem)
+	// ErrorItemNotFound corresponds to errSecItemNotFound result code
+	ErrorItemNotFound = Error(C.errSecItemNotFound)
+	// ErrorInteractionNotAllowed corresponds to errSecInteractionNotAllowed result code
+	ErrorInteractionNotAllowed = Error(C.errSecInteractionNotAllowed)
+	// ErrorDecode corresponds to errSecDecode result code
+	ErrorDecode = Error(C.errSecDecode)
 )
 
 func checkError(errCode C.OSStatus) error {
@@ -54,6 +64,7 @@ func (k Error) Error() string {
 	return msg
 }
 
+// SecClass is the items class code
 type SecClass int
 
 // Keychain Item Classes
@@ -69,28 +80,40 @@ var (
 	SecClassGenericPassword SecClass = 1
 )
 
+// SecClassKey is the key type for SecClass
 var SecClassKey = attrKey(C.CFTypeRef(C.kSecClass))
 var secClassTypeRef = map[SecClass]C.CFTypeRef{
 	SecClassGenericPassword: C.CFTypeRef(C.kSecClassGenericPassword),
 }
 
 var (
-	ServiceKey     = attrKey(C.CFTypeRef(C.kSecAttrService))
-	LabelKey       = attrKey(C.CFTypeRef(C.kSecAttrLabel))
-	AccountKey     = attrKey(C.CFTypeRef(C.kSecAttrAccount))
+	// ServiceKey is for kSecAttrService
+	ServiceKey = attrKey(C.CFTypeRef(C.kSecAttrService))
+	// LabelKey is for kSecAttrLabel
+	LabelKey = attrKey(C.CFTypeRef(C.kSecAttrLabel))
+	// AccountKey is for kSecAttrAccount
+	AccountKey = attrKey(C.CFTypeRef(C.kSecAttrAccount))
+	// AccessGroupKey is for kSecAttrAccessGroup
 	AccessGroupKey = attrKey(C.CFTypeRef(C.kSecAttrAccessGroup))
-	DataKey        = attrKey(C.CFTypeRef(C.kSecValueData))
+	// DataKey is for kSecValueData
+	DataKey = attrKey(C.CFTypeRef(C.kSecValueData))
 )
 
+// Synchronizable is the items synchronizable status
 type Synchronizable int
 
 const (
+	// SynchronizableDefault is the default setting
 	SynchronizableDefault Synchronizable = 0
-	SynchronizableAny                    = 1
-	SynchronizableYes                    = 2
-	SynchronizableNo                     = 3
+	// SynchronizableAny is for kSecAttrSynchronizableAny
+	SynchronizableAny = 1
+	// SynchronizableYes enables synchronization
+	SynchronizableYes = 2
+	// SynchronizableNo disables synchronization
+	SynchronizableNo = 3
 )
 
+// SynchronizableKey is the key type for Synchronizable
 var SynchronizableKey = attrKey(C.CFTypeRef(C.kSecAttrSynchronizable))
 var syncTypeRef = map[Synchronizable]C.CFTypeRef{
 	SynchronizableAny: C.CFTypeRef(C.kSecAttrSynchronizableAny),
@@ -98,35 +121,54 @@ var syncTypeRef = map[Synchronizable]C.CFTypeRef{
 	SynchronizableNo:  C.CFTypeRef(C.kCFBooleanFalse),
 }
 
+// Accessible is the items accessibility
 type Accessible int
 
 const (
-	AccessibleDefault                        Accessible = 0
-	AccessibleWhenUnlocked                              = 1
-	AccessibleAfterFirstUnlock                          = 2
-	AccessibleAlways                                    = 3
-	AccessibleWhenPasscodeSetThisDeviceOnly             = 4
-	AccessibleWhenUnlockedThisDeviceOnly                = 5
-	AccessibleAfterFirstUnlockThisDeviceOnly            = 6
-	AccessibleAccessibleAlwaysThisDeviceOnly            = 7
+	// AccessibleDefault is the default
+	AccessibleDefault Accessible = 0
+	// AccessibleWhenUnlocked is when unlocked
+	AccessibleWhenUnlocked = 1
+	// AccessibleAfterFirstUnlock is after first unlock
+	AccessibleAfterFirstUnlock = 2
+	// AccessibleAlways is always
+	AccessibleAlways = 3
+	// AccessibleWhenPasscodeSetThisDeviceOnly is when passcode is set
+	AccessibleWhenPasscodeSetThisDeviceOnly = 4
+	// AccessibleWhenUnlockedThisDeviceOnly is when unlocked for this device only
+	AccessibleWhenUnlockedThisDeviceOnly = 5
+	// AccessibleAfterFirstUnlockThisDeviceOnly is after first unlock for this device only
+	AccessibleAfterFirstUnlockThisDeviceOnly = 6
+	// AccessibleAccessibleAlwaysThisDeviceOnly is always for this device only
+	AccessibleAccessibleAlwaysThisDeviceOnly = 7
 )
 
+// MatchLimit is whether to limit results on query
 type MatchLimit int
 
 const (
+	// MatchLimitDefault is the default
 	MatchLimitDefault MatchLimit = 0
-	MatchLimitOne                = 1
-	MatchLimitAll                = 2
+	// MatchLimitOne limits to one result
+	MatchLimitOne = 1
+	// MatchLimitAll is no limit
+	MatchLimitAll = 2
 )
 
+// MatchLimitKey is key type for MatchLimit
 var MatchLimitKey = attrKey(C.CFTypeRef(C.kSecMatchLimit))
 var matchTypeRef = map[MatchLimit]C.CFTypeRef{
 	MatchLimitOne: C.CFTypeRef(C.kSecMatchLimitOne),
 	MatchLimitAll: C.CFTypeRef(C.kSecMatchLimitAll),
 }
 
+// ReturnAttributesKey is key type for kSecReturnAttributes
 var ReturnAttributesKey = attrKey(C.CFTypeRef(C.kSecReturnAttributes))
+
+// ReturnDataKey is key type for kSecReturnData
 var ReturnDataKey = attrKey(C.CFTypeRef(C.kSecReturnData))
+
+// ReturnRefKey is key type for kSecReturnRef
 var ReturnRefKey = attrKey(C.CFTypeRef(C.kSecReturnRef))
 
 // Item for adding, querying or deleting.
@@ -135,10 +177,12 @@ type Item struct {
 	attr map[string]interface{}
 }
 
+// SetSecClass sets the security class
 func (k *Item) SetSecClass(sc SecClass) {
 	k.attr[SecClassKey] = secClassTypeRef[sc]
 }
 
+// SetString sets a string attibute for a string key
 func (k *Item) SetString(key string, s string) {
 	if s != "" {
 		k.attr[key] = s
@@ -147,18 +191,22 @@ func (k *Item) SetString(key string, s string) {
 	}
 }
 
+// SetService sets the service attribute
 func (k *Item) SetService(s string) {
 	k.SetString(ServiceKey, s)
 }
 
+// SetAccount sets the account attribute
 func (k *Item) SetAccount(a string) {
 	k.SetString(AccountKey, a)
 }
 
+// SetLabel sets the label attribute
 func (k *Item) SetLabel(l string) {
 	k.SetString(LabelKey, l)
 }
 
+// SetData sets the data attribute
 func (k *Item) SetData(b []byte) {
 	if b != nil {
 		k.attr[DataKey] = b
@@ -167,10 +215,12 @@ func (k *Item) SetData(b []byte) {
 	}
 }
 
+// SetAccessGroup sets the access group attribute
 func (k *Item) SetAccessGroup(ag string) {
 	k.SetString(AccessGroupKey, ag)
 }
 
+// SetSynchronizable sets the synchronizable attribute
 func (k *Item) SetSynchronizable(sync Synchronizable) {
 	if sync != SynchronizableDefault {
 		k.attr[SynchronizableKey] = syncTypeRef[sync]
@@ -179,6 +229,7 @@ func (k *Item) SetSynchronizable(sync Synchronizable) {
 	}
 }
 
+// SetAccessible sets the accessible attribute
 func (k *Item) SetAccessible(accessible Accessible) {
 	if accessible != AccessibleDefault {
 		k.attr[AccessibleKey] = accessibleTypeRef[accessible]
@@ -187,6 +238,7 @@ func (k *Item) SetAccessible(accessible Accessible) {
 	}
 }
 
+// SetMatchLimit sets the match limit
 func (k *Item) SetMatchLimit(matchLimit MatchLimit) {
 	if matchLimit != MatchLimitDefault {
 		k.attr[MatchLimitKey] = matchTypeRef[matchLimit]
@@ -195,19 +247,22 @@ func (k *Item) SetMatchLimit(matchLimit MatchLimit) {
 	}
 }
 
+// SetReturnAttributes sets the return value type on query
 func (k *Item) SetReturnAttributes(b bool) {
 	k.attr[ReturnAttributesKey] = b
 }
 
+// SetReturnData enables returning data on query
 func (k *Item) SetReturnData(b bool) {
 	k.attr[ReturnDataKey] = b
 }
 
+// SetReturnRef enables returning references on query
 func (k *Item) SetReturnRef(b bool) {
 	k.attr[ReturnRefKey] = b
 }
 
-// NewItem is a new empty keychain item.
+// NewItem is a new empty keychain item
 func NewItem() Item {
 	return Item{make(map[string]interface{})}
 }
@@ -237,7 +292,7 @@ func AddItem(item Item) error {
 	return err
 }
 
-// UpdateItem updates the queryItem with the Parameters from updateItem
+// UpdateItem updates the queryItem with the parameters from updateItem
 func UpdateItem(queryItem Item, updateItem Item) error {
 	cfDict, err := ConvertMapToCFDictionary(queryItem.attr)
 	if err != nil {
@@ -301,8 +356,8 @@ func QueryItem(item Item) ([]QueryResult, error) {
 	if typeID == C.CFArrayGetTypeID() {
 		arr := CFArrayToArray(C.CFArrayRef(resultsRef))
 		for _, ref := range arr {
-			typeID := C.CFGetTypeID(ref)
-			if typeID == C.CFDictionaryGetTypeID() {
+			elementTypeID := C.CFGetTypeID(ref)
+			if elementTypeID == C.CFDictionaryGetTypeID() {
 				item, err := convertResult(C.CFDictionaryRef(ref))
 				if err != nil {
 					return nil, err
@@ -383,7 +438,7 @@ func DeleteItem(item Item) error {
 	return checkError(errCode)
 }
 
-// Deprecated
+// GetAccountsForService is deprecated
 func GetAccountsForService(service string) ([]string, error) {
 	return GetGenericPasswordAccounts(service)
 }
