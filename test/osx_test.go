@@ -22,6 +22,44 @@ func TestAccess(t *testing.T) {
 	}
 }
 
+func TestUpdateItem(t *testing.T) {
+	var err error
+
+	item := keychain.NewGenericPassword("TestAccess", "firsttest", "TestUpdateItem", []byte("toomanysecrets2"), "")
+	defer keychain.DeleteItem(item)
+	err = keychain.AddItem(item)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data1, err := keychain.GetGenericPassword("TestAccess", "firsttest", "TestUpdateItem", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data1) != "toomanysecrets2" {
+		t.Fatal("TestUpdateItem: new password does not match")
+	}
+
+	updateItem := keychain.NewItem()
+	updateItem.SetSecClass(keychain.SecClassGenericPassword)
+	updateItem.SetService("TestAccess")
+	updateItem.SetAccount("firsttest")
+	updateItem.SetLabel("TestUpdateItem")
+	updateItem.SetData([]byte("toomanysecrets3"))
+	err = keychain.UpdateItem(item, updateItem)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data2, err := keychain.GetGenericPassword("TestAccess", "firsttest", "TestUpdateItem", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data2) != "toomanysecrets3" {
+		t.Fatal("TestUpdateItem: updated password does not match")
+	}
+}
+
 func TestGenericPasswordRef(t *testing.T) {
 	service, account, label, accessGroup, password := "TestGenericPasswordRef", "test", "", "", "toomanysecrets"
 
