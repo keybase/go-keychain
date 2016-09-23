@@ -14,7 +14,7 @@ func TestAccess(t *testing.T) {
 	var err error
 
 	item := keychain.NewGenericPassword("TestAccess", "test2", "A label", []byte("toomanysecrets2"), "")
-	defer keychain.DeleteItem(item)
+	defer func() { _ = keychain.DeleteItem(item) }()
 
 	trustedApplications := []string{"/Applications/Mail.app"}
 	item.SetAccess(&keychain.Access{Label: "Mail", TrustedApplications: trustedApplications})
@@ -28,7 +28,7 @@ func TestUpdateItem(t *testing.T) {
 	var err error
 
 	item := keychain.NewGenericPassword("TestAccess", "firsttest", "TestUpdateItem", []byte("toomanysecrets2"), "")
-	defer keychain.DeleteItem(item)
+	defer func() { _ = keychain.DeleteItem(item) }()
 	err = keychain.AddItem(item)
 	if err != nil {
 		t.Fatal(err)
@@ -66,7 +66,7 @@ func TestGenericPasswordRef(t *testing.T) {
 	service, account, label, accessGroup, password := "TestGenericPasswordRef", "test", "", "", "toomanysecrets"
 
 	item := keychain.NewGenericPassword(service, account, label, []byte(password), accessGroup)
-	defer keychain.DeleteItem(item)
+	defer func() { _ = keychain.DeleteItem(item) }()
 	err := keychain.AddItem(item)
 	if err != nil {
 		t.Fatal(err)
