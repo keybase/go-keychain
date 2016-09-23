@@ -106,6 +106,25 @@ if err == keychain.ErrorNotFound {
 
 ### OS X
 
+Creating a new keychain and add an item to it:
+
+```go
+
+// Add a new key chain into ~/Application Support/Keychains, with the provided password
+k, err := keychain.NewKeychain("mykeychain.keychain", "my keychain password", false)
+if err != nil {
+  // Error creating
+}
+
+// Create generic password item with service, account, label, password, access group
+item := keychain.NewGenericPassword("MyService", "gabriel", "A label", []byte("toomanysecrets"), "A123456789.group.com.mycorp")
+item.UseKeychain(k)
+err := keychain.AddItem(item)
+if err != nil {
+  // Error creating
+}
+```
+
 Set a trusted applications for item (OS X only):
 
 ```go
