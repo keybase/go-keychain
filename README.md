@@ -111,7 +111,7 @@ Creating a new keychain and add an item to it:
 ```go
 
 // Add a new key chain into ~/Application Support/Keychains, with the provided password
-k, err := keychain.NewKeychain("mykeychain.keychain", "my keychain password", false)
+k, err := keychain.NewKeychain("mykeychain.keychain", "my keychain password")
 if err != nil {
   // Error creating
 }

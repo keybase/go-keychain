@@ -14,6 +14,7 @@ import (
 	"unsafe"
 )
 
+// AccessibleKey is key for kSecAttrAccessible
 var AccessibleKey = attrKey(C.CFTypeRef(C.kSecAttrAccessible))
 var accessibleTypeRef = map[Accessible]C.CFTypeRef{
 	AccessibleWhenUnlocked:                   C.CFTypeRef(C.kSecAttrAccessibleWhenUnlocked),
@@ -28,9 +29,11 @@ var accessibleTypeRef = map[Accessible]C.CFTypeRef{
 }
 
 var (
+	// AccessKey is key for kSecAttrAccess
 	AccessKey = attrKey(C.CFTypeRef(C.kSecAttrAccess))
 )
 
+// createAccess creates a SecAccessRef as CFTypeRef.
 // The returned SecAccessRef, if non-nil, must be released via CFRelease.
 func createAccess(label string, trustedApplications []string) (C.CFTypeRef, error) {
 	if len(trustedApplications) == 0 {
@@ -50,9 +53,9 @@ func createAccess(label string, trustedApplications []string) (C.CFTypeRef, erro
 
 	var trustedApplicationsRefs []C.CFTypeRef
 	for _, trustedApplication := range trustedApplications {
-		trustedApplicationRef, err := createTrustedApplication(trustedApplication)
-		if err != nil {
-			return nil, err
+		trustedApplicationRef, createErr := createTrustedApplication(trustedApplication)
+		if createErr != nil {
+			return nil, createErr
 		}
 		defer C.CFRelease(C.CFTypeRef(trustedApplicationRef))
 		trustedApplicationsRefs = append(trustedApplicationsRefs, trustedApplicationRef)
@@ -70,6 +73,7 @@ func createAccess(label string, trustedApplications []string) (C.CFTypeRef, erro
 	return C.CFTypeRef(access), nil
 }
 
+// createTrustedApplication creates a SecTrustedApplicationRef as a CFTypeRef.
 // The returned SecTrustedApplicationRef, if non-nil, must be released via CFRelease.
 func createTrustedApplication(trustedApplication string) (C.CFTypeRef, error) {
 	var trustedApplicationCStr *C.char
@@ -88,15 +92,19 @@ func createTrustedApplication(trustedApplication string) (C.CFTypeRef, error) {
 	return C.CFTypeRef(trustedApplicationRef), nil
 }
 
+// Access defines whats applications can use the keychain item
 type Access struct {
 	Label               string
 	TrustedApplications []string
 }
 
+// Convert converts Access to CFTypeRef.
+// The returned CFTypeRef, if non-nil, must be released via CFRelease.
 func (a Access) Convert() (C.CFTypeRef, error) {
 	return createAccess(a.Label, a.TrustedApplications)
 }
 
+// SetAccess sets Access on Item
 func (k *Item) SetAccess(a *Access) {
 	if a != nil {
 		k.attr[AccessKey] = a
@@ -112,8 +120,9 @@ func DeleteItemRef(ref C.CFTypeRef) error {
 }
 
 var (
+	// KeychainKey is key for kSecUseKeychain
 	KeychainKey = attrKey(C.CFTypeRef(C.kSecUseKeychain))
-
+	// MatchSearchListKey is key for kSecMatchSearchList
 	MatchSearchListKey = attrKey(C.CFTypeRef(C.kSecMatchSearchList))
 )
 
@@ -122,8 +131,17 @@ type Keychain struct {
 	path string
 }
 
-// NewKeychain creates a new keychain file with either a password, or a triggered prompt to the user
-func NewKeychain(path, password string, promptUser bool) (Keychain, error) {
+// NewKeychain creates a new keychain file with a password
+func NewKeychain(path string, password string) (Keychain, error) {
+	return newKeychain(path, password, false)
+}
+
+// NewKeychainWithPrompt creates a new Keychain and prompts user for password
+func NewKeychainWithPrompt(path string) (Keychain, error) {
+	return newKeychain(path, "", true)
+}
+
+func newKeychain(path, password string, promptUser bool) (Keychain, error) {
 	pathRef := C.CString(path)
 	defer C.free(unsafe.Pointer(pathRef))
 
@@ -161,10 +179,12 @@ func openKeychainRef(path string) (C.SecKeychainRef, error) {
 	return kref, nil
 }
 
+// Delete the Keychain
 func (kc *Keychain) Delete() error {
 	return os.Remove(kc.path)
 }
 
+// Convert Keychain to CFTypeRef.
 // The returned CFTypeRef, if non-nil, must be released via CFRelease.
 func (kc Keychain) Convert() (C.CFTypeRef, error) {
 	keyRef, err := openKeychainRef(kc.path)
@@ -173,6 +193,7 @@ func (kc Keychain) Convert() (C.CFTypeRef, error) {
 
 type keychainArray []Keychain
 
+// Convert the keychainArray to a CFTypeRef.
 // The returned CFTypeRef, if non-nil, must be released via CFRelease.
 func (ka keychainArray) Convert() (C.CFTypeRef, error) {
 	var refs = make([]C.CFTypeRef, len(ka))
@@ -180,6 +201,7 @@ func (ka keychainArray) Convert() (C.CFTypeRef, error) {
 
 	for idx, kc := range ka {
 		if refs[idx], err = kc.Convert(); err != nil {
+			// If we error trying to convert lets release any we converted before
 			for _, ref := range refs {
 				if ref != nil {
 					Release(ref)
@@ -192,12 +214,12 @@ func (ka keychainArray) Convert() (C.CFTypeRef, error) {
 	return C.CFTypeRef(ArrayToCFArray(refs)), nil
 }
 
-// extensions of Item for OSX specific features
-
+// SetMatchSearchList sets match type on keychains
 func (k *Item) SetMatchSearchList(karr ...Keychain) {
 	k.attr[MatchSearchListKey] = keychainArray(karr)
 }
 
+// UseKeychain tells item to use the specified Keychain
 func (k *Item) UseKeychain(kc Keychain) {
 	k.attr[KeychainKey] = kc
 }

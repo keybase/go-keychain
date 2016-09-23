@@ -3,8 +3,8 @@
 package test
 
 import (
-	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/keybase/go-keychain"
@@ -93,34 +93,27 @@ func TestGenericPasswordRef(t *testing.T) {
 	}
 
 	passwordAfter, err := keychain.GetGenericPassword(service, account, label, accessGroup)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if passwordAfter != nil {
 		t.Fatal("Shouldn't have password")
 	}
 }
 
 func TestAddingAndQueryingNewKeychain(t *testing.T) {
-	file := tmpKeychain(t)
-	defer os.Remove(file)
+	keychainPath := tempPath(t)
+	defer func() { _ = os.Remove(keychainPath) }()
 
 	service, account, label, accessGroup, password := "TestAddingAndQueryingNewKeychain", "test", "", "", "toomanysecrets"
 
-	k, err := keychain.NewKeychain(file, "my password", false)
+	k, err := keychain.NewKeychain(keychainPath, "my password")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	item := keychain.NewGenericPassword(service, account, label, []byte(password), accessGroup)
-
-	// add to the default keychain
-	if err = keychain.AddItem(item); err != nil {
-		t.Fatal(err)
-	}
-
-	defer keychain.DeleteGenericPasswordItem(service, account)
-
 	item.UseKeychain(k)
-
-	// and then to the new keychain
 	if err = keychain.AddItem(item); err != nil {
 		t.Fatal(err)
 	}
@@ -145,14 +138,26 @@ func TestAddingAndQueryingNewKeychain(t *testing.T) {
 	} else if string(results[0].Data) != password {
 		t.Fatalf("Expected password to be %s, got %s", password, results[0].Data)
 	}
-}
 
-func tmpKeychain(t *testing.T) (path string) {
-	file, err := ioutil.TempFile(os.TempDir(), "go-keychain-test")
+	// Search default keychain to make sure it's not there
+	queryDefault := keychain.NewItem()
+	queryDefault.SetSecClass(keychain.SecClassGenericPassword)
+	queryDefault.SetService(service)
+	queryDefault.SetMatchLimit(keychain.MatchLimitOne)
+	queryDefault.SetReturnData(true)
+	resultsDefault, err := keychain.QueryItem(queryDefault)
 	if err != nil {
 		t.Fatal(err)
-		return
 	}
-	os.Remove(file.Name())
-	return file.Name() + ".keychain"
+	if len(resultsDefault) != 0 {
+		t.Fatalf("Expected no results")
+	}
+}
+
+func tempPath(t *testing.T) string {
+	temp, err := keychain.RandomID("go-keychain-test-")
+	if err != nil {
+		panic(err)
+	}
+	return filepath.Join(os.TempDir(), temp+".keychain")
 }
