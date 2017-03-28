@@ -97,6 +97,8 @@ var (
 	AccessGroupKey = attrKey(C.CFTypeRef(C.kSecAttrAccessGroup))
 	// DataKey is for kSecValueData
 	DataKey = attrKey(C.CFTypeRef(C.kSecValueData))
+	// DescriptionKey is for kSecAttrDescription
+	DescriptionKey = attrKey(C.CFTypeRef(C.kSecAttrDescription))
 )
 
 // Synchronizable is the items synchronizable status
@@ -204,6 +206,11 @@ func (k *Item) SetAccount(a string) {
 // SetLabel sets the label attribute
 func (k *Item) SetLabel(l string) {
 	k.SetString(LabelKey, l)
+}
+
+// SetDescription sets the description attribute
+func (k *Item) SetDescription(s string) {
+	k.SetString(DescriptionKey, s)
 }
 
 // SetData sets the data attribute
@@ -316,6 +323,7 @@ type QueryResult struct {
 	Account     string
 	AccessGroup string
 	Label       string
+	Description string
 	Data        []byte
 }
 
@@ -404,6 +412,8 @@ func convertResult(d C.CFDictionaryRef) (*QueryResult, error) {
 			result.AccessGroup = CFStringToString(C.CFStringRef(v))
 		case LabelKey:
 			result.Label = CFStringToString(C.CFStringRef(v))
+		case DescriptionKey:
+			result.Description = CFStringToString(C.CFStringRef(v))
 		case DataKey:
 			b, err := CFDataToBytes(C.CFDataRef(v))
 			if err != nil {
