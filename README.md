@@ -1,8 +1,8 @@
 # Go Keychain
 
-A library for accessing the Keychain for OSX and iOS in Go (golang).
+A library for accessing the Keychain for macOS and iOS in Go (golang).
 
-Requires OS X 10.9 or greater and iOS 8 or greater.
+Requires macOS 10.9 or greater and iOS 8 or greater.
 
 ## Usage
 
