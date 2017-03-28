@@ -4,9 +4,14 @@ A library for accessing the Keychain for macOS and iOS in Go (golang).
 
 Requires macOS 10.9 or greater and iOS 8 or greater.
 
+```go
+import "github.com/keybase/go-keychain"
+```
+
+
 ## Usage
 
-The API is meant to mirror the Keychain API and is not necessarily idiomatic go.
+The API is meant to mirror the macOS/iOS Keychain API and is not necessarily idiomatic go.
 
 #### Add Item
 
