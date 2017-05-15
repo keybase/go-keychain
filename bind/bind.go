@@ -27,7 +27,7 @@ func DeleteGenericPassword(service string, account string, accessGroup string) e
 	return keychain.DeleteItem(item)
 }
 
-// TestGenericPassword runs test code for generic password keychain item.
+// GenericPasswordTest runs test code for generic password keychain item.
 // This is here so we can export using gomobile bind and run this method on iOS simulator and device.
 // Access groups aren't supported in iOS simulator.
 func GenericPasswordTest(t Test, service string, accessGroup string) {
