@@ -223,3 +223,10 @@ func (k *Item) SetMatchSearchList(karr ...Keychain) {
 func (k *Item) UseKeychain(kc Keychain) {
 	k.attr[KeychainKey] = kc
 }
+
+// OpenKeychain to open an existing keychain
+func OpenKeychain(path string) Keychain {
+ 	k := new(Keychain)
+ 	k.path = path
+ 	return *k
+}
