@@ -1,6 +1,6 @@
 // +build darwin ios
 
-package test
+package bindtest
 
 import (
 	"testing"

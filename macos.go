@@ -163,7 +163,16 @@ func newKeychain(path, password string, promptUser bool) (Keychain, error) {
 		return Keychain{}, err
 	}
 
-	return Keychain{path}, nil
+	return Keychain{
+		path: path,
+	}, nil
+}
+
+// NewWithPath to use an existing keychain
+func NewWithPath(path string) Keychain {
+	return Keychain{
+		path: path,
+	}
 }
 
 // The returned SecKeychainRef, if non-nil, must be released via CFRelease.
@@ -177,6 +186,31 @@ func openKeychainRef(path string) (C.SecKeychainRef, error) {
 	}
 
 	return kref, nil
+}
+
+// UnlockAtPath unlocks keychain at path
+func UnlockAtPath(path string, password string) error {
+	kref, err := openKeychainRef(path)
+	defer Release(C.CFTypeRef(kref))
+	if err != nil {
+		return err
+	}
+	passwordRef := C.CString(password)
+	defer C.free(unsafe.Pointer(passwordRef))
+	if err := checkError(C.SecKeychainUnlock(kref, C.UInt32(len(password)), unsafe.Pointer(passwordRef), C.Boolean(1))); err != nil {
+		return err
+	}
+	return nil
+}
+
+// LockAtPath locks keychain at path
+func LockAtPath(path string) error {
+	kref, err := openKeychainRef(path)
+	defer Release(C.CFTypeRef(kref))
+	if err != nil {
+		return err
+	}
+	return checkError(C.SecKeychainLock(kref))
 }
 
 // Delete the Keychain
@@ -222,11 +256,4 @@ func (k *Item) SetMatchSearchList(karr ...Keychain) {
 // UseKeychain tells item to use the specified Keychain
 func (k *Item) UseKeychain(kc Keychain) {
 	k.attr[KeychainKey] = kc
-}
-
-// OpenKeychain to open an existing keychain
-func OpenKeychain(path string) Keychain {
- 	k := new(Keychain)
- 	k.path = path
- 	return *k
 }

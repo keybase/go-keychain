@@ -9,15 +9,18 @@ import (
 	"github.com/keybase/go-keychain"
 )
 
+// Test is a bind interface for the test
 type Test interface {
 	Fail(s string)
 }
 
+// AddGenericPassword adds generic password
 func AddGenericPassword(service string, account string, label string, password string, accessGroup string) error {
 	item := keychain.NewGenericPassword(service, account, label, []byte(password), accessGroup)
 	return keychain.AddItem(item)
 }
 
+// DeleteGenericPassword deletes generic password
 func DeleteGenericPassword(service string, account string, accessGroup string) error {
 	item := keychain.NewItem()
 	item.SetSecClass(keychain.SecClassGenericPassword)

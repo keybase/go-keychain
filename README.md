@@ -130,6 +130,12 @@ if err != nil {
 }
 ```
 
+Using a Keychain at path:
+
+```go
+k, err := keychain.NewWithPath("mykeychain.keychain")
+```
+
 Set a trusted applications for item (OS X only):
 
 ```go
@@ -143,8 +149,8 @@ err := keychain.AddItem(item)
 
 Bindable package in `bind`. iOS project in `ios`. Run that project to test iOS.
 
-To re-generate framework (in bind dir):
+To re-generate framework:
 
 ```
-gomobile bind -target=ios -o ../ios/bind.framework
+(cd bind && gomobile bind -target=ios -tags=ios -o ../ios/bind.framework)
 ```
