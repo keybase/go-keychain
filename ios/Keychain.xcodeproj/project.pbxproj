@@ -13,7 +13,7 @@
 		00FB9F1F1BB5DE2E003FBCBD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 00FB9F1E1BB5DE2E003FBCBD /* Assets.xcassets */; };
 		00FB9F221BB5DE2E003FBCBD /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 00FB9F201BB5DE2E003FBCBD /* LaunchScreen.storyboard */; };
 		00FB9F2D1BB5DE2E003FBCBD /* KeychainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00FB9F2C1BB5DE2E003FBCBD /* KeychainTests.swift */; };
-		00FB9F3E1BB5E147003FBCBD /* bind.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 00FB9F3D1BB5E147003FBCBD /* bind.framework */; settings = {ASSET_TAGS = (); }; };
+		00FB9F3E1BB5E147003FBCBD /* bind.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 00FB9F3D1BB5E147003FBCBD /* bind.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -152,9 +152,11 @@
 				TargetAttributes = {
 					00FB9F131BB5DE2D003FBCBD = {
 						CreatedOnToolsVersion = 7.0;
+						LastSwiftMigration = 0820;
 					};
 					00FB9F271BB5DE2E003FBCBD = {
 						CreatedOnToolsVersion = 7.0;
+						LastSwiftMigration = 0820;
 						TestTargetID = 00FB9F131BB5DE2D003FBCBD;
 					};
 				};
@@ -345,6 +347,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Keychain/Keychain-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Debug;
 		};
@@ -363,6 +366,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = me.rel.Keychain;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Keychain/Keychain-Bridging-Header.h";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Release;
 		};
@@ -378,6 +382,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = me.rel.KeychainTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 3.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Keychain.app/Keychain";
 			};
 			name = Debug;
@@ -394,6 +399,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = me.rel.KeychainTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 3.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Keychain.app/Keychain";
 			};
 			name = Release;
