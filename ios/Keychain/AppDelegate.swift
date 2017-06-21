@@ -17,16 +17,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var error: NSError?
 
-    GoBindAddGenericPassword("KeybaseTest", "gabriel", "A label", "toomanysecrets", nil, &error);
+    BindAddGenericPassword("KeybaseTest", "gabriel", "A label", "toomanysecrets", nil, &error);
     if (error != nil) {
-      print("Failed: \(error)")
+      print("Failed: \(String(describing: error))")
     } else {
       print("Add OK")
     }
 
-    GoBindDeleteGenericPassword("KeybaseTest", "gabriel", nil, &error)
+    BindDeleteGenericPassword("KeybaseTest", "gabriel", nil, &error)
     if (error != nil) {
-      print("Failed: \(error)")
+      print("Failed: \(String(describing: error))")
     } else {
       print("Delete OK")
     }
