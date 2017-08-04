@@ -37,6 +37,8 @@ var (
 	ErrorInteractionNotAllowed = Error(C.errSecInteractionNotAllowed)
 	// ErrorDecode corresponds to errSecDecode result code
 	ErrorDecode = Error(C.errSecDecode)
+	// ErrorNoSuchKeychain corresponds to errSecNoSuchKeychain result code
+	ErrorNoSuchKeychain = Error(C.errSecNoSuchKeychain)
 )
 
 func checkError(errCode C.OSStatus) error {
@@ -56,6 +58,8 @@ func (k Error) Error() string {
 		msg = fmt.Sprintf("Duplicate item (%d)", k)
 	case ErrorParam:
 		msg = fmt.Sprintf("One or more parameters passed to the function were not valid (%d)", k)
+	case ErrorNoSuchKeychain:
+		msg = fmt.Sprintf("No such keychain (%d)", k)
 	case -25243:
 		msg = fmt.Sprintf("No access for item (%d)", k)
 	default:
