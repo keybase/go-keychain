@@ -22,6 +22,19 @@ func TestAccess(t *testing.T) {
 	}
 }
 
+func TestAccessWithoutTrust(t *testing.T) {
+	var err error
+
+	item := NewGenericPassword("TestAccess", "test2", "A label", []byte("toomanysecrets2"), "")
+	defer func() { _ = DeleteItem(item) }()
+
+	item.SetAccess(NoApplicationsTrusted)
+	err = AddItem(item)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestUpdateItem(t *testing.T) {
 	var err error
 
