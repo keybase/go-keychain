@@ -175,6 +175,19 @@ func NewWithPath(path string) Keychain {
 	}
 }
 
+// Status returns the status of the keychain
+func (kc Keychain) Status() error {
+	// returns no error even if it doesn't exist
+	kref, err := openKeychainRef(kc.path)
+	if err != nil {
+		return err
+	}
+	defer C.CFRelease(C.CFTypeRef(kref))
+
+	var status C.SecKeychainStatus
+	return checkError(C.SecKeychainGetStatus(kref, &status))
+}
+
 // The returned SecKeychainRef, if non-nil, must be released via CFRelease.
 func openKeychainRef(path string) (C.SecKeychainRef, error) {
 	pathName := C.CString(path)

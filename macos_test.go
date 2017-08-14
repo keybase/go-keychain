@@ -3,9 +3,11 @@
 package keychain
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestAccess(t *testing.T) {
@@ -200,5 +202,23 @@ func TestNewWithPath(t *testing.T) {
 	}
 	if string(results[0].Data) != "toomanysecrets2" {
 		t.Fatalf("Invalid password: %s", results[0].Data)
+	}
+}
+
+func TestStatus(t *testing.T) {
+	path := tempPath(t)
+	defer func() { _ = os.Remove(path) }()
+	k, newErr := NewKeychain(path, "testkeychainpassword")
+	if newErr != nil {
+		t.Fatal(newErr)
+	}
+
+	if err := k.Status(); err != nil {
+		t.Fatal(err)
+	}
+
+	nonexistent := NewWithPath(fmt.Sprintf("this_shouldnt_exist_%d", time.Now()))
+	if err := nonexistent.Status(); err != ErrorNoSuchKeychain {
+		t.Fatalf("Expected %v, get %v", ErrorNoSuchKeychain, err)
 	}
 }
