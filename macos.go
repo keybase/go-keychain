@@ -89,12 +89,6 @@ func createTrustedApplication(trustedApplication string) (C.CFTypeRef, error) {
 	return C.CFTypeRef(trustedApplicationRef), nil
 }
 
-// NoApplicationsTrusted is a helper value for an Access level where no applications
-// are trusted and the user will have to explicitly approve all
-var NoApplicationsTrusted = &Access{
-	SelfUntrusted: true,
-}
-
 // Access defines whats applications can use the keychain item
 type Access struct {
 	SelfUntrusted       bool
