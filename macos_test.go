@@ -13,11 +13,50 @@ import (
 func TestAccess(t *testing.T) {
 	var err error
 
-	item := NewGenericPassword("TestAccess", "test2", "A label", []byte("toomanysecrets2"), "")
+	service, account, label, accessGroup, password := "TestAccess", "test2", "A label", "", "toomanysecrets2"
+	item := NewGenericPassword(service, account, label, []byte(password), accessGroup)
 	defer func() { _ = DeleteItem(item) }()
 
 	trustedApplications := []string{"/Applications/Mail.app"}
 	item.SetAccess(&Access{Label: "Mail", TrustedApplications: trustedApplications})
+	err = AddItem(item)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = GetGenericPassword(service, account, label, accessGroup)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAccessWithImpliedSelf(t *testing.T) {
+	var err error
+
+	service, account, label, accessGroup, password := "TestAccess", "test2", "A label", "", "toomanysecrets2"
+	item := NewGenericPassword(service, account, label, []byte(password), accessGroup)
+	defer func() { _ = DeleteItem(item) }()
+
+	item.SetAccess(&Access{Label: "Self", TrustedApplications: nil})
+	err = AddItem(item)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = GetGenericPassword(service, account, label, accessGroup)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAccessWithoutTrust(t *testing.T) {
+	var err error
+
+	item := NewGenericPassword("TestAccess", "test2", "A label", []byte("toomanysecrets2"), "")
+	defer func() { _ = DeleteItem(item) }()
+
+	trustedApplications := []string{}
+	item.SetAccess(&Access{Label: "No Trust", TrustedApplications: trustedApplications})
 	err = AddItem(item)
 	if err != nil {
 		t.Fatal(err)
