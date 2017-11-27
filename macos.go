@@ -156,12 +156,12 @@ func newKeychain(path, password string, promptUser bool) (Keychain, error) {
 		errCode = C.SecKeychainCreate(pathRef, C.UInt32(len(password)), unsafe.Pointer(passwordRef), C.Boolean(0), nil, &kref)
 	}
 
-	// TODO: Without passing in kref I get 'One or more parameters passed to the function were not valid (-50)'
-	defer Release(C.CFTypeRef(kref))
-
 	if err := checkError(errCode); err != nil {
 		return Keychain{}, err
 	}
+
+	// TODO: Without passing in kref I get 'One or more parameters passed to the function were not valid (-50)'
+	defer Release(C.CFTypeRef(kref))
 
 	return Keychain{
 		path: path,
