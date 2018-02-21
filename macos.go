@@ -1,4 +1,4 @@
-// +build darwin,!ios
+// +build darwin,!ios,!go1.10
 
 package keychain
 
