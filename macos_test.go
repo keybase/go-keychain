@@ -121,7 +121,7 @@ func TestGenericPasswordRef(t *testing.T) {
 	ref, err := QueryItemRef(query)
 	if err != nil {
 		t.Fatal(err)
-	} else if ref == nil {
+	} else if ref == 0 {
 		t.Fatal("Missing result")
 	} else {
 		err = DeleteItemRef(ref)
@@ -256,7 +256,7 @@ func TestStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	nonexistent := NewWithPath(fmt.Sprintf("this_shouldnt_exist_%d", time.Now()))
+	nonexistent := NewWithPath(fmt.Sprintf("this_shouldnt_exist_%s", time.Now().String()))
 	if err := nonexistent.Status(); err != ErrorNoSuchKeychain {
 		t.Fatalf("Expected %v, get %v", ErrorNoSuchKeychain, err)
 	}
