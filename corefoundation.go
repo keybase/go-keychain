@@ -1,4 +1,4 @@
-// +build darwin
+// +build darwin ios
 
 package keychain
 
@@ -66,15 +66,17 @@ func MapToCFDictionary(m map[C.CFTypeRef]C.CFTypeRef) (C.CFDictionaryRef, error)
 }
 
 // CFDictionaryToMap converts CFDictionaryRef to a map.
-func CFDictionaryToMap(cfDict C.CFDictionaryRef) (m map[C.CFTypeRef]C.CFTypeRef) {
+func CFDictionaryToMap(cfDict C.CFDictionaryRef) (m map[C.CFTypeRef]uintptr) {
 	count := C.CFDictionaryGetCount(cfDict)
 	if count > 0 {
 		keys := make([]C.CFTypeRef, count)
 		values := make([]C.CFTypeRef, count)
 		C.CFDictionaryGetKeysAndValues(cfDict, (*unsafe.Pointer)(unsafe.Pointer(&keys[0])), (*unsafe.Pointer)(unsafe.Pointer(&values[0])))
-		m = make(map[C.CFTypeRef]C.CFTypeRef, count)
+		m = make(map[C.CFTypeRef]uintptr, count)
 		for i := C.CFIndex(0); i < count; i++ {
-			m[keys[i]] = values[i]
+			k := keys[i]
+			v := values[i]
+			m[k] = uintptr(v)
 		}
 	}
 	return
@@ -256,7 +258,7 @@ func ConvertCFDictionary(d C.CFDictionaryRef) (map[interface{}]interface{}, erro
 		if err != nil {
 			return nil, err
 		}
-		gv, err := Convert(v)
+		gv, err := Convert(C.CFTypeRef(v))
 		if err != nil {
 			return nil, err
 		}
