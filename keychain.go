@@ -335,18 +335,18 @@ type QueryResult struct {
 func QueryItemRef(item Item) (C.CFTypeRef, error) {
 	cfDict, err := ConvertMapToCFDictionary(item.attr)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	defer Release(C.CFTypeRef(cfDict))
 
 	var resultsRef C.CFTypeRef
 	errCode := C.SecItemCopyMatching(cfDict, &resultsRef)
 	if Error(errCode) == ErrorItemNotFound {
-		return 0, nil
+		return nil, nil
 	}
 	err = checkError(errCode)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	return resultsRef, nil
 }
@@ -357,7 +357,7 @@ func QueryItem(item Item) ([]QueryResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	if resultsRef == 0 {
+	if resultsRef == nil {
 		return nil, nil
 	}
 	defer Release(resultsRef)
