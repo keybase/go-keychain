@@ -1,4 +1,4 @@
-// +build darwin,!go1.10
+// +build darwin,go1.10
 
 package keychain
 
@@ -335,18 +335,18 @@ type QueryResult struct {
 func QueryItemRef(item Item) (C.CFTypeRef, error) {
 	cfDict, err := ConvertMapToCFDictionary(item.attr)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	defer Release(C.CFTypeRef(cfDict))
 
 	var resultsRef C.CFTypeRef
 	errCode := C.SecItemCopyMatching(cfDict, &resultsRef)
 	if Error(errCode) == ErrorItemNotFound {
-		return nil, nil
+		return 0, nil
 	}
 	err = checkError(errCode)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	return resultsRef, nil
 }
@@ -357,7 +357,7 @@ func QueryItem(item Item) ([]QueryResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	if resultsRef == nil {
+	if resultsRef == 0 {
 		return nil, nil
 	}
 	defer Release(resultsRef)
