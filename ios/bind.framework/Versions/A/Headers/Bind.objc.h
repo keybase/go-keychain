@@ -17,14 +17,28 @@
 - (void)fail:(NSString*)s;
 @end
 
+/**
+ * AddGenericPassword adds generic password
+ */
 FOUNDATION_EXPORT BOOL BindAddGenericPassword(NSString* service, NSString* account, NSString* label, NSString* password, NSString* accessGroup, NSError** error);
 
+/**
+ * DeleteGenericPassword deletes generic password
+ */
 FOUNDATION_EXPORT BOOL BindDeleteGenericPassword(NSString* service, NSString* account, NSString* accessGroup, NSError** error);
 
+/**
+ * GenericPasswordTest runs test code for generic password keychain item.
+This is here so we can export using gomobile bind and run this method on iOS simulator and device.
+Access groups aren't supported in iOS simulator.
+ */
 FOUNDATION_EXPORT void BindGenericPasswordTest(id<BindTest> t, NSString* service, NSString* accessGroup);
 
 @class BindTest;
 
+/**
+ * Test is a bind interface for the test
+ */
 @interface BindTest : NSObject <goSeqRefInterface, BindTest> {
 }
 @property(strong, readonly) id _ref;
