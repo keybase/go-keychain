@@ -377,7 +377,7 @@ func QueryItem(item Item) ([]QueryResult, error) {
 				}
 				results = append(results, *item)
 			} else {
-				return nil, fmt.Errorf("Invalid result type (If you SetReturnRef(true) you should use QueryItemRef directly).")
+				return nil, fmt.Errorf("invalid result type (If you SetReturnRef(true) you should use QueryItemRef directly)")
 			}
 		}
 	} else if typeID == C.CFDictionaryGetTypeID() {
