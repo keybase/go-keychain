@@ -1,6 +1,8 @@
 // +build darwin
 // +build !go1.10
 
+// TODO: Remove this file once we've completely migrated to go 1.10.x.
+
 package keychain
 
 // See https://developer.apple.com/library/ios/documentation/Security/Reference/keychainservices/index.html for the APIs used below.

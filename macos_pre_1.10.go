@@ -1,4 +1,7 @@
 // +build darwin,!ios
+// +build !go1.10
+
+// TODO: Remove this file once we've completely migrated to go 1.10.x.
 
 package keychain
 
