@@ -256,7 +256,7 @@ func TestStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	nonexistent := NewWithPath(fmt.Sprintf("this_shouldnt_exist_%d", time.Now()))
+	nonexistent := NewWithPath(fmt.Sprintf("this_shouldnt_exist_%s", time.Now()))
 	if err := nonexistent.Status(); err != ErrorNoSuchKeychain {
 		t.Fatalf("Expected %v, get %v", ErrorNoSuchKeychain, err)
 	}
