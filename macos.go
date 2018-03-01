@@ -212,10 +212,7 @@ func UnlockAtPath(path string, password string) error {
 	}
 	passwordRef := C.CString(password)
 	defer C.free(unsafe.Pointer(passwordRef))
-	if err := checkError(C.SecKeychainUnlock(kref, C.UInt32(len(password)), unsafe.Pointer(passwordRef), C.Boolean(1))); err != nil {
-		return err
-	}
-	return nil
+	return checkError(C.SecKeychainUnlock(kref, C.UInt32(len(password)), unsafe.Pointer(passwordRef), C.Boolean(1)))
 }
 
 // LockAtPath locks keychain at path
