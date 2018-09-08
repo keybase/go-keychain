@@ -14,7 +14,11 @@ package keychain
 #include <Security/Security.h>
 */
 import "C"
-import "fmt"
+
+import (
+	"fmt"
+	"time"
+)
 
 // Error defines keychain errors
 type Error int
@@ -104,6 +108,10 @@ var (
 	DataKey = attrKey(C.CFTypeRef(C.kSecValueData))
 	// DescriptionKey is for kSecAttrDescription
 	DescriptionKey = attrKey(C.CFTypeRef(C.kSecAttrDescription))
+	// CreationTimeKey is for kSecAttrCreationDate
+	CreationTimeKey = attrKey(C.CFTypeRef(C.kSecAttrCreationDate))
+	// ModificationTimeKey is for kSecAttrModificationDate
+	ModificationTimeKey = attrKey(C.CFTypeRef(C.kSecAttrModificationDate))
 )
 
 // Synchronizable is the items synchronizable status
@@ -324,12 +332,14 @@ func UpdateItem(queryItem Item, updateItem Item) error {
 // QueryResult stores all possible results from queries.
 // Not all fields are applicable all the time. Results depend on query.
 type QueryResult struct {
-	Service     string
-	Account     string
-	AccessGroup string
-	Label       string
-	Description string
-	Data        []byte
+	Service          string
+	Account          string
+	AccessGroup      string
+	Label            string
+	Description      string
+	Data             []byte
+	CreationTime     time.Time
+	ModificationTime time.Time
 }
 
 // QueryItemRef returns query result as CFTypeRef. You must release it when you are done.
@@ -425,11 +435,30 @@ func convertResult(d C.CFDictionaryRef) (*QueryResult, error) {
 				return nil, err
 			}
 			result.Data = b
+		case CreationTimeKey:
+			result.CreationTime = convertTimeResult(C.CFDateRef(v))
+		case ModificationTimeKey:
+			result.ModificationTime = convertTimeResult(C.CFDateRef(v))
 			// default:
 			// fmt.Printf("Unhandled key in conversion: %v = %v\n", cfTypeValue(k), cfTypeValue(v))
 		}
 	}
 	return &result, nil
+}
+
+func convertTimeResult(d C.CFDateRef) time.Time {
+	// CFDateGetAbsoluteTime converts CFDate to CFAbsoluteTime
+	// CFAbsoluteTime is a type alias for CFTimeInterval
+	// CFTimeInterval is a Double
+	secsFloat := float64(C.CFDateGetAbsoluteTime(d)) + float64(C.kCFAbsoluteTimeIntervalSince1970)
+	// I only see second resolution in the output from security(1), so us should be fine
+	// and avoid math headaches of trying to prove to myself that ns will fit.
+	scale := int64(time.Second / time.Microsecond)
+	microSecs := int64(secsFloat * float64(scale))
+	return time.Unix(
+		microSecs/scale,
+		(microSecs%scale)*int64(time.Microsecond),
+	)
 }
 
 // DeleteGenericPasswordItem removes a generic password item.
