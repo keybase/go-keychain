@@ -83,12 +83,29 @@ var (
 		 kSecAttrService
 	*/
 	SecClassGenericPassword SecClass = 1
+
+	/*
+		kSecClassCertificate item attributes:
+			kSecAttrAccess (macOS only)
+			kSecAttrAccessGroup (iOS only)
+			kSecAttrAccessible (iOS only)
+			kSecAttrCertificateType
+			kSecAttrCertificateEncoding
+			kSecAttrLabel
+			kSecAttrSubject
+			kSecAttrIssuer
+			kSecAttrSerialNumber
+			kSecAttrSubjectKeyID
+			kSecAttrPublicKeyHash
+	*/
+	SecClassCertificate SecClass = 2
 )
 
 // SecClassKey is the key type for SecClass
 var SecClassKey = attrKey(C.CFTypeRef(C.kSecClass))
 var secClassTypeRef = map[SecClass]C.CFTypeRef{
 	SecClassGenericPassword: C.CFTypeRef(C.kSecClassGenericPassword),
+	SecClassCertificate:     C.CFTypeRef(C.kSecClassCertificate),
 }
 
 var (
