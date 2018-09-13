@@ -52,3 +52,16 @@ func TestTimeToCFDate(t *testing.T) {
 		t.Fatalf("expected %f, got %f", expectedAbs, abs)
 	}
 }
+
+func TestCFDateToTime(t *testing.T) {
+	const abs = testTimeAbsoluteTimeSeconds + 0.123456789
+	d := absoluteTimeToCFDate(abs)
+	defer releaseCFDate(d)
+
+	tm := CFDateToTime(d)
+	const expectedNano = testTimeUnixSeconds*nsPerSec + 123456835
+	nano := tm.UnixNano()
+	if nano != expectedNano {
+		t.Fatalf("expected %d, got %d", expectedNano, nano)
+	}
+}

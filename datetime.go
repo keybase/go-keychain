@@ -62,6 +62,10 @@ func cfDateToAbsoluteTime(d C.CFDateRef) C.CFAbsoluteTime {
 	return C.CFDateGetAbsoluteTime(d)
 }
 
+func absoluteTimeToCFDate(abs C.CFAbsoluteTime) C.CFDateRef {
+	return C.CFDateCreate(C.kCFAllocatorDefault, abs)
+}
+
 func releaseCFDate(d C.CFDateRef) {
 	Release(C.CFTypeRef(d))
 }
