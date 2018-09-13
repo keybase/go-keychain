@@ -58,6 +58,10 @@ func CFDateToTime(d C.CFDateRef) time.Time {
 	return time.Unix(s, ns)
 }
 
+func cfDateToAbsoluteTime(d C.CFDateRef) C.CFAbsoluteTime {
+	return C.CFDateGetAbsoluteTime(d)
+}
+
 func releaseCFDate(d C.CFDateRef) {
 	Release(C.CFTypeRef(d))
 }
