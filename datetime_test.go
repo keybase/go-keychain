@@ -8,8 +8,8 @@ import (
 )
 
 func TestTimeToCFDateToTime(t *testing.T) {
-	// 2018-09-13T06:08:49.999999999+00:00
-	tm := time.Unix(1536818929, 999999999)
+	// 2018-09-13T06:08:49.123456789+00:00
+	tm := time.Unix(1536818929, 123456789)
 	date, err := TimeToCFDate(tm)
 	if err != nil {
 		t.Fatal(err)
