@@ -3,7 +3,6 @@
 package keychain
 
 import (
-	"math"
 	"testing"
 	"time"
 )
@@ -23,14 +22,9 @@ const (
 func TestUnixToAbsoluteTime(t *testing.T) {
 	var testNano int64 = 123456789
 	abs := unixToAbsoluteTime(testTimeUnixSeconds, testNano)
-	int, frac := math.Modf(float64(abs))
-	s := int64(int)
-	ns := int64(frac * nsPerSec)
-	if s != testTimeAbsoluteTimeSeconds {
-		t.Fatalf("expected %d, got %d", testTimeAbsoluteTimeSeconds, s)
-	}
-	if ns != testNano {
-		t.Fatalf("expected %d, got %d", testNano, ns)
+	const expectedAbs = testTimeAbsoluteTimeSeconds + 0.123456789
+	if abs != expectedAbs {
+		t.Fatalf("expected %f, got %f", expectedAbs, abs)
 	}
 }
 

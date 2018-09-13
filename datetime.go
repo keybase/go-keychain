@@ -15,8 +15,13 @@ import (
 
 const nsPerSec = 1000000000
 
+func absoluteTimeIntervalSince1970() int64 {
+	return int64(C.kCFAbsoluteTimeIntervalSince1970)
+}
+
 func unixToAbsoluteTime(s int64, ns int64) C.CFAbsoluteTime {
-	return C.CFTimeInterval(ns)/nsPerSec + C.CFAbsoluteTime(s) - C.kCFAbsoluteTimeIntervalSince1970
+	abs := s - absoluteTimeIntervalSince1970()
+	return C.CFAbsoluteTime(abs) + C.CFTimeInterval(ns)/nsPerSec
 }
 
 func absoluteTimeToUnix(abs C.CFAbsoluteTime) (int64, int64) {
