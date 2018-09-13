@@ -37,7 +37,7 @@ func absoluteTimeToDebugString(abs C.CFAbsoluteTime) string {
 	return CFStringToString(cfStr)
 }
 
-func cfDateToString(d C.CFDateRef) string {
+func cfDateToDebugString(d C.CFDateRef) string {
 	dateFormatter := C.CFDateFormatterCreate(C.kCFAllocatorDefault, C.CFLocaleCopyCurrent(), C.kCFDateFormatterFullStyle, C.kCFDateFormatterFullStyle)
 	defer Release(C.CFTypeRef(dateFormatter))
 	cfStr := C.CFDateFormatterCreateStringWithDate(C.kCFAllocatorDefault, dateFormatter, d)
