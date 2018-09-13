@@ -40,16 +40,15 @@ func TestAbsoluteTimeToUnix(t *testing.T) {
 	}
 }
 
-func TestTimeToCFDateToTime(t *testing.T) {
-	// 2018-09-13T06:08:49.123456789+00:00
-	tm := time.Unix(1536818929, 123456789)
-	date := TimeToCFDate(tm)
-	t.Logf("date is %s", cfDateToDebugString(date))
-	defer releaseCFDate(date)
+func TestTimeToCFDate(t *testing.T) {
+	var testNano int64 = 123456789
+	tm := time.Unix(testTimeUnixSeconds, testNano)
+	d := TimeToCFDate(tm)
+	defer releaseCFDate(d)
 
-	tm2 := CFDateToTime(date)
-
-	if tm != tm2 {
-		t.Fatalf("expected %s, got %s", tm, tm2)
+	abs := cfDateToAbsoluteTime(d)
+	const expectedAbs = testTimeAbsoluteTimeSeconds + 0.123456789
+	if abs != expectedAbs {
+		t.Fatalf("expected %f, got %f", expectedAbs, abs)
 	}
 }
