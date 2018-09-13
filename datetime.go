@@ -25,8 +25,8 @@ func unixToAbsoluteTime(s int64, ns int64) C.CFAbsoluteTime {
 }
 
 func absoluteTimeToUnix(abs C.CFAbsoluteTime) (int64, int64) {
-	int, frac := math.Modf(float64(abs + C.kCFAbsoluteTimeIntervalSince1970))
-	return int64(int), int64(frac * nsPerSec)
+	int, frac := math.Modf(float64(abs))
+	return int64(int) + absoluteTimeIntervalSince1970(), int64(frac * nsPerSec)
 }
 
 func absoluteTimeToDebugString(abs C.CFAbsoluteTime) string {

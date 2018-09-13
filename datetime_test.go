@@ -34,8 +34,9 @@ func TestAbsoluteTimeToUnix(t *testing.T) {
 	if s != testTimeUnixSeconds {
 		t.Fatalf("expected %d, got %d", testTimeUnixSeconds, s)
 	}
-	if ns != 123456789 {
-		t.Fatalf("expected %d, got %d", 123456789, ns)
+	const expectedNano = 123456835
+	if ns != expectedNano {
+		t.Fatalf("expected %d, got %d", expectedNano, ns)
 	}
 }
 
