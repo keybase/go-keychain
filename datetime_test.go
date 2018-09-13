@@ -45,7 +45,7 @@ func TestTimeToCFDateToTime(t *testing.T) {
 	tm := time.Unix(1536818929, 123456789)
 	date := TimeToCFDate(tm)
 	t.Logf("date is %s", cfDateToDebugString(date))
-	defer releaseCFDateForTest(date)
+	defer releaseCFDate(date)
 
 	tm2 := CFDateToTime(date)
 
