@@ -28,6 +28,17 @@ func TestUnixToAbsoluteTime(t *testing.T) {
 	}
 }
 
+func TestAbsoluteTimeToUnix(t *testing.T) {
+	const abs = testTimeAbsoluteTimeSeconds + 0.123456789
+	s, ns := absoluteTimeToUnix(abs)
+	if s != testTimeUnixSeconds {
+		t.Fatalf("expected %d, got %d", testTimeUnixSeconds, s)
+	}
+	if ns != 123456789 {
+		t.Fatalf("expected %d, got %d", 123456789, ns)
+	}
+}
+
 func TestTimeToCFDateToTime(t *testing.T) {
 	// 2018-09-13T06:08:49.123456789+00:00
 	tm := time.Unix(1536818929, 123456789)
