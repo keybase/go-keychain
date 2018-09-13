@@ -45,12 +45,10 @@ func cfDateToDebugString(d C.CFDateRef) string {
 	return CFStringToString(cfStr)
 }
 
-func releaseCFDateForTest(d C.CFDateRef) {
-	Release(C.CFTypeRef(d))
-}
-
 func TimeToCFDate(t time.Time) C.CFDateRef {
-	abs := unixToAbsoluteTime(t.Unix(), int64(t.Nanosecond()))
+	s := t.Unix()
+	ns := int64(t.Nanosecond())
+	abs := unixToAbsoluteTime(s, ns)
 	return C.CFDateCreate(C.kCFAllocatorDefault, abs)
 }
 
@@ -58,4 +56,8 @@ func CFDateToTime(d C.CFDateRef) time.Time {
 	abs := C.CFDateGetAbsoluteTime(d)
 	s, ns := absoluteTimeToUnix(abs)
 	return time.Unix(s, ns)
+}
+
+func releaseCFDate(d C.CFDateRef) {
+	Release(C.CFTypeRef(d))
 }
