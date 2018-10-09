@@ -50,6 +50,8 @@ func cfDateToDebugString(d C.CFDateRef) string {
 	return CFStringToString(cfStr)
 }
 
+// TimeToCFDate will convert the given time.Time to a CFDateRef, which
+// must be released with Release(ref).
 func TimeToCFDate(t time.Time) C.CFDateRef {
 	s := t.Unix()
 	ns := int64(t.Nanosecond())
@@ -57,11 +59,14 @@ func TimeToCFDate(t time.Time) C.CFDateRef {
 	return C.CFDateCreate(C.kCFAllocatorDefault, abs)
 }
 
+// CFDateToTime will convert the given CFDateRef to a time.Time.
 func CFDateToTime(d C.CFDateRef) time.Time {
 	abs := C.CFDateGetAbsoluteTime(d)
 	s, ns := absoluteTimeToUnix(abs)
 	return time.Unix(s, ns)
 }
+
+// Wrappers around C functions for testing.
 
 func cfDateToAbsoluteTime(d C.CFDateRef) C.CFAbsoluteTime {
 	return C.CFDateGetAbsoluteTime(d)
