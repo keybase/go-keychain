@@ -34,6 +34,7 @@ func TestAbsoluteTimeToUnix(t *testing.T) {
 	if s != testTimeUnixSeconds {
 		t.Fatalf("expected %d, got %d", testTimeUnixSeconds, s)
 	}
+	// Some precision loss from floating point.
 	const expectedNano = 123456835
 	if ns != expectedNano {
 		t.Fatalf("expected %d, got %d", expectedNano, ns)
@@ -59,6 +60,7 @@ func TestCFDateToTime(t *testing.T) {
 	defer releaseCFDate(d)
 
 	tm := CFDateToTime(d)
+	// Some precision loss from floating point.
 	const expectedNano = testTimeUnixSeconds*nsPerSec + 123456835
 	nano := tm.UnixNano()
 	if nano != expectedNano {

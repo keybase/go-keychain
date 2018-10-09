@@ -24,6 +24,10 @@ func absoluteTimeIntervalSince1970() int64 {
 }
 
 func unixToAbsoluteTime(s int64, ns int64) C.CFAbsoluteTime {
+	// Subtract as int64s first before converting to floating
+	// point to minimize precision loss (assuming the given time
+	// isn't much earlier than the Core Foundation absolute
+	// reference date).
 	abs := s - absoluteTimeIntervalSince1970()
 	// Need to cast CFTimeInterval to CFAbsoluteTime for go 1.9.x.
 	return C.CFAbsoluteTime(abs) + C.CFAbsoluteTime(C.CFTimeInterval(ns))/nsPerSec
