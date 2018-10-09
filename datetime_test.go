@@ -13,8 +13,8 @@ const (
 	// (1970-01-01T00:00:00+00:00).
 	testTimeUnixSeconds = 1536818929
 	// Number of seconds between the test time and
-	// CoreFoundation's absolute reference date
-	// (1 Jan 2001  00:00:00 GMT). See
+	// Core Foundation's absolute reference date
+	// (2001-01-01T00:00:00+00:00). See
 	// https://developer.apple.com/documentation/corefoundation/cfabsolutetime?language=objc
 	testTimeAbsoluteTimeSeconds = 558511729
 )
