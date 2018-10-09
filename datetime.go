@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const nsPerSec = 1000000000
+const nsPerSec = 1000 * 1000 * 1000
 
 func absoluteTimeIntervalSince1970() int64 {
 	return int64(C.kCFAbsoluteTimeIntervalSince1970)
