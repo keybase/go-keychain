@@ -15,6 +15,10 @@ import (
 
 const nsPerSec = 1000 * 1000 * 1000
 
+// absoluteTimeIntervalSince1970() returns the number of seconds from
+// the Unix epoch (1970-01-01T00:00:00+00:00) to the Core Foundation
+// absolute reference date (2001-01-01T00:00:00+00:00). It should be
+// exactly 978307200.
 func absoluteTimeIntervalSince1970() int64 {
 	return int64(C.kCFAbsoluteTimeIntervalSince1970)
 }
