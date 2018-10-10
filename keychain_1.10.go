@@ -107,10 +107,10 @@ var (
 	DataKey = attrKey(C.CFTypeRef(C.kSecValueData))
 	// DescriptionKey is for kSecAttrDescription
 	DescriptionKey = attrKey(C.CFTypeRef(C.kSecAttrDescription))
-	// CreationTimeKey is for kSecAttrCreationDate
-	CreationTimeKey = attrKey(C.CFTypeRef(C.kSecAttrCreationDate))
-	// ModificationTimeKey is for kSecAttrModificationDate
-	ModificationTimeKey = attrKey(C.CFTypeRef(C.kSecAttrModificationDate))
+	// CreationDateKey is for kSecAttrCreationDate
+	CreationDateKey = attrKey(C.CFTypeRef(C.kSecAttrCreationDate))
+	// ModificationDateKey is for kSecAttrModificationDate
+	ModificationDateKey = attrKey(C.CFTypeRef(C.kSecAttrModificationDate))
 )
 
 // Synchronizable is the items synchronizable status
@@ -337,8 +337,8 @@ type QueryResult struct {
 	Label            string
 	Description      string
 	Data             []byte
-	CreationTime     time.Time
-	ModificationTime time.Time
+	CreationDate     time.Time
+	ModificationDate time.Time
 }
 
 // QueryItemRef returns query result as CFTypeRef. You must release it when you are done.
@@ -434,10 +434,10 @@ func convertResult(d C.CFDictionaryRef) (*QueryResult, error) {
 				return nil, err
 			}
 			result.Data = b
-		case CreationTimeKey:
-			result.CreationTime = CFDateToTime(C.CFDateRef(v))
-		case ModificationTimeKey:
-			result.ModificationTime = CFDateToTime(C.CFDateRef(v))
+		case CreationDateKey:
+			result.CreationDate = CFDateToTime(C.CFDateRef(v))
+		case ModificationDateKey:
+			result.ModificationDate = CFDateToTime(C.CFDateRef(v))
 			// default:
 			// fmt.Printf("Unhandled key in conversion: %v = %v\n", cfTypeValue(k), cfTypeValue(v))
 		}
