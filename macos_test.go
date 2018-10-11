@@ -192,6 +192,7 @@ func TestNewWithPath(t *testing.T) {
 	query.SetAccount("gabriel2")
 	query.SetSecClass(SecClassGenericPassword)
 	query.SetMatchLimit(MatchLimitOne)
+	query.SetReturnAttributes(true)
 	query.SetReturnData(true)
 	results, err := QueryItem(query)
 	if err != nil {
@@ -202,6 +203,12 @@ func TestNewWithPath(t *testing.T) {
 	}
 	if string(results[0].Data) != "toomanysecrets2" {
 		t.Fatalf("Invalid password: %s", results[0].Data)
+	}
+	if results[0].CreationDate.Equal(time.Time{}) {
+		t.Fatal("Got null creation date")
+	}
+	if results[0].ModificationDate.Equal(time.Time{}) {
+		t.Fatal("Got null creation date")
 	}
 }
 
