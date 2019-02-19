@@ -50,30 +50,16 @@ func TestGenericPasswordRef(t *testing.T) {
 func TestInternetPassword(t *testing.T) {
 	query := NewItem()
 	query.SetSecClass(SecClassInternetPassword)
-	query.SetLabel("shed.bonfire.io")
+	query.SetLabel("github.com")
 	query.SetMatchLimit(MatchLimitOne)
 	query.SetReturnAttributes(true)
-	query.SetReturnData(true)
 	results, err := QueryItem(query)
 	if err != nil {
 		// Error
-		fmt.Printf("Error: %v", err)
+		t.Errorf("Query Error: %v", err)
 	} else {
 		for _, r := range results {
 			fmt.Printf("%#v\n", r.Account)
-		}
-	}
-	query.SetReturnAttributes(true)
-	query.SetReturnData(true)
-	results, err = QueryItem(query)
-	if err != nil {
-		// Error
-		fmt.Printf("Error: %v", err)
-	} else {
-		for _, r := range results {
-			pwd := fmt.Sprintf("%s", r.Data)
-			fmt.Printf("%#v\n", pwd)
-			fmt.Printf("%#v\n", r)
 		}
 	}
 }
