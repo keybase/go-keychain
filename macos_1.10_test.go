@@ -3,7 +3,10 @@
 
 package keychain
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestGenericPasswordRef(t *testing.T) {
 	service, account, label, accessGroup, password := "TestGenericPasswordRef", "test", "", "", "toomanysecrets"
@@ -41,5 +44,22 @@ func TestGenericPasswordRef(t *testing.T) {
 	}
 	if passwordAfter != nil {
 		t.Fatal("Shouldn't have password")
+	}
+}
+
+func TestInternetPassword(t *testing.T) {
+	query := NewItem()
+	query.SetSecClass(SecClassInternetPassword)
+	query.SetLabel("github.com")
+	query.SetMatchLimit(MatchLimitOne)
+	query.SetReturnAttributes(true)
+	results, err := QueryItem(query)
+	if err != nil {
+		// Error
+		t.Errorf("Query Error: %v", err)
+	} else {
+		for _, r := range results {
+			fmt.Printf("%#v\n", r.Account)
+		}
 	}
 }
