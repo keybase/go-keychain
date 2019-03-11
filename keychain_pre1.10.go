@@ -73,6 +73,8 @@ var (
 	ErrorDecode = Error(C.errSecDecode)
 	// ErrorNoSuchKeychain corresponds to errSecNoSuchKeychain result code
 	ErrorNoSuchKeychain = Error(C.errSecNoSuchKeychain)
+	// ErrorNoAcccessForItem corresponds to errSecNoAccessForItem result code
+	ErrorNoAccessForItem = Error(C.errSecNoAccessForItem)
 )
 
 func checkError(errCode C.OSStatus) error {
@@ -82,24 +84,36 @@ func checkError(errCode C.OSStatus) error {
 	return Error(errCode)
 }
 
-func (k Error) Error() string {
-	var msg string
+func (k Error) Error() (msg string) {
 	// SecCopyErrorMessageString is only available on OSX, so derive manually.
+	// Messages derived from `$ security error $errcode`.
 	switch k {
-	case ErrorItemNotFound:
-		msg = fmt.Sprintf("Item not found (%d)", k)
-	case ErrorDuplicateItem:
-		msg = fmt.Sprintf("Duplicate item (%d)", k)
+	case ErrorUnimplemented:
+		msg = "Function or operation not implemented."
 	case ErrorParam:
-		msg = fmt.Sprintf("One or more parameters passed to the function were not valid (%d)", k)
+		msg = "One or more parameters passed to the function were not valid."
+	case ErrorAllocate:
+		msg = "Failed to allocate memory."
+	case ErrorNotAvailable:
+		msg = "No keychain is available. You may need to restart your computer."
+	case ErrorAuthFailed:
+		msg = "The user name or passphrase you entered is not correct."
+	case ErrorDuplicateItem:
+		msg = "The specified item already exists in the keychain."
+	case ErrorItemNotFound:
+		msg = "The specified item could not be found in the keychain."
+	case ErrorInteractionNotAllowed:
+		msg = "User interaction is not allowed."
+	case ErrorDecode:
+		msg = "Unable to decode the provided data."
 	case ErrorNoSuchKeychain:
-		msg = fmt.Sprintf("No such keychain (%d)", k)
-	case -25243:
-		msg = fmt.Sprintf("No access for item (%d)", k)
+		msg = "The specified keychain could not be found."
+	case ErrorNoAccessForItem:
+		msg = "The specified item has no access control."
 	default:
-		msg = fmt.Sprintf("Keychain Error (%d)", k)
+		msg = "Keychain Error."
 	}
-	return msg
+	return fmt.Sprintf("%s (%d)", msg, k)
 }
 
 // SecClass is the items class code
