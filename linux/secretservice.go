@@ -9,8 +9,8 @@ import (
 )
 
 const SecretServiceInterface = "org.freedesktop.secrets"
-const SecretServiceObjectPath = "/org/freedesktop/secrets"
-const DefaultCollection = "/org/freedesktop/secrets/aliases/default"
+const SecretServiceObjectPath dbus.ObjectPath = "/org/freedesktop/secrets"
+const DefaultCollection dbus.ObjectPath = "/org/freedesktop/secrets/aliases/default"
 
 type authenticationMode string
 
@@ -27,7 +27,7 @@ type Secret struct {
 
 type PromptCompletedResult struct {
 	Dismissed bool
-	Paths     dbus.Variant // as described in https://specifications.freedesktop.org/secret-service/ch09.html
+	Paths     dbus.Variant
 }
 
 type SecretService struct {
@@ -74,6 +74,21 @@ func (s *SecretService) SearchCollection(collection dbus.ObjectPath, attributes 
 	return items, nil
 }
 
+func (s *SecretService) CreateItem(collection dbus.ObjectPath, properties map[string]dbus.Variant, secret Secret, replace bool) (item dbus.ObjectPath, err error) {
+	var prompt dbus.ObjectPath
+	err = s.Obj(collection).
+		Call("org.freedesktop.Secret.Collection.CreateItem", 0, properties, secret, replace).
+		Store(&item, &prompt)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create item")
+	}
+	_, err = s.PromptAndWait(prompt)
+	if err != nil {
+		return "", err
+	}
+	return item, nil
+}
+
 func (s *SecretService) GetSecret(item dbus.ObjectPath, session dbus.ObjectPath) (secret *Secret, err error) {
 	var secretI []interface{}
 	err = s.Obj(item).
@@ -92,7 +107,7 @@ func (s *SecretService) GetSecret(item dbus.ObjectPath, session dbus.ObjectPath)
 
 const NullPrompt = "/"
 
-func (s *SecretService) UnlockItems(items []dbus.ObjectPath) (err error) {
+func (s *SecretService) Unlock(items []dbus.ObjectPath) (err error) {
 	var dummy []dbus.ObjectPath
 	var prompt dbus.ObjectPath
 	err = s.ServiceObj().
@@ -157,33 +172,62 @@ func (s *SecretService) PromptAndWait(prompt dbus.ObjectPath) (paths *dbus.Varia
 	}
 }
 
-func main() {
+func main2() error {
 	srv, err := NewService()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	session, err := srv.OpenSession(AuthenticationPlain)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	query := map[string]string{"service": "keybase", "username": "jack"}
 	items, err := srv.SearchCollection(DefaultCollection, query)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	item := items[0] // panic if nej. if more than 1??
-	err = srv.UnlockItems([]dbus.ObjectPath{item})
+	err = srv.Unlock([]dbus.ObjectPath{item})
 	if err != nil {
-		panic(err)
+		return err
 	}
 	secret, err := srv.GetSecret(item, session)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	fmt.Printf("%s\n", secret.Value)
 	err = srv.LockItems([]dbus.ObjectPath{item})
 	if err != nil {
-		panic(err)
+		return err
+	}
+	props := make(map[string]dbus.Variant)
+	props["org.freedesktop.Secret.Item.Label"] = dbus.MakeVariant("alice@keybase")
+	props["org.freedesktop.Secret.Item.Attributes"] = dbus.MakeVariant(map[string]string{
+		"service":  "keybase",
+		"username": "t_alice",
+	})
+	newSecret := Secret{
+		Session:     session,
+		Parameters:  nil,
+		Value:       []byte("naww"),
+		ContentType: "text/plain",
+	}
+	err = srv.Unlock([]dbus.ObjectPath{DefaultCollection})
+	if err != nil {
+		return err
+	}
+	item, err = srv.CreateItem(DefaultCollection, props, newSecret, true)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%+v\n", item)
+	return nil
+}
+
+func main() {
+	err := main2()
+	if err != nil {
+		panic(fmt.Sprintf("%+v\n", err))
 	}
 }
 
