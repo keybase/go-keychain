@@ -181,7 +181,7 @@ func main2() error {
 	if err != nil {
 		return err
 	}
-	query := map[string]string{"service": "keybase", "username": "jack"}
+	query := map[string]string{"service": "keybase", "username": "t_alice"}
 	items, err := srv.SearchCollection(DefaultCollection, query)
 	if err != nil {
 		return err
@@ -201,7 +201,7 @@ func main2() error {
 		return err
 	}
 	props := make(map[string]dbus.Variant)
-	props["org.freedesktop.Secret.Item.Label"] = dbus.MakeVariant("alice@keybase")
+	props["org.freedesktop.Secret.Item.Label"] = dbus.MakeVariant("alice@keybaseee")
 	props["org.freedesktop.Secret.Item.Attributes"] = dbus.MakeVariant(map[string]string{
 		"service":  "keybase",
 		"username": "t_alice",
@@ -216,11 +216,11 @@ func main2() error {
 	if err != nil {
 		return err
 	}
-	item, err = srv.CreateItem(DefaultCollection, props, newSecret, true)
+	newItem, err := srv.CreateItem(DefaultCollection, props, newSecret, true)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%+v\n", item)
+	fmt.Printf("%+v\n", newItem)
 	return nil
 }
 
@@ -231,6 +231,8 @@ func main() {
 	}
 }
 
-// TODO does default collection always exist..?
+// TODO does default collection always exist..? (no)
 // TODO fallback if no gnome-keyring EXPL
 // upgrade path...?
+// if there are more than 1, what should we do? just delete all of them and fail?
+// TODO dh ietf
