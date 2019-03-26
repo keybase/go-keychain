@@ -1,4 +1,4 @@
-package main
+package secretservice
 
 import (
 	"fmt"
@@ -15,6 +15,8 @@ const DefaultCollection dbus.ObjectPath = "/org/freedesktop/secrets/aliases/defa
 type authenticationMode string
 
 const AuthenticationPlain authenticationMode = "plain"
+
+const NilFlags = 0
 
 type Attributes map[string]string
 
@@ -56,7 +58,7 @@ func (s *SecretService) Obj(path dbus.ObjectPath) *dbus.Object {
 func (s *SecretService) OpenSession(mode authenticationMode) (session dbus.ObjectPath, err error) {
 	var dummy dbus.Variant
 	err = s.ServiceObj().
-		Call("org.freedesktop.Secret.Service.OpenSession", 0, mode, dbus.MakeVariant("")).
+		Call("org.freedesktop.Secret.Service.OpenSession", NilFlags, mode, dbus.MakeVariant("")).
 		Store(&dummy, &session)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to open secretservice session")
@@ -66,7 +68,7 @@ func (s *SecretService) OpenSession(mode authenticationMode) (session dbus.Objec
 
 func (s *SecretService) SearchCollection(collection dbus.ObjectPath, attributes Attributes) (items []dbus.ObjectPath, err error) {
 	err = s.Obj(collection).
-		Call("org.freedesktop.Secret.Collection.SearchItems", 0, attributes).
+		Call("org.freedesktop.Secret.Collection.SearchItems", NilFlags, attributes).
 		Store(&items)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to search collection")
@@ -77,7 +79,7 @@ func (s *SecretService) SearchCollection(collection dbus.ObjectPath, attributes 
 func (s *SecretService) CreateItem(collection dbus.ObjectPath, properties map[string]dbus.Variant, secret Secret, replace bool) (item dbus.ObjectPath, err error) {
 	var prompt dbus.ObjectPath
 	err = s.Obj(collection).
-		Call("org.freedesktop.Secret.Collection.CreateItem", 0, properties, secret, replace).
+		Call("org.freedesktop.Secret.Collection.CreateItem", NilFlags, properties, secret, replace).
 		Store(&item, &prompt)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create item")
@@ -89,10 +91,37 @@ func (s *SecretService) CreateItem(collection dbus.ObjectPath, properties map[st
 	return item, nil
 }
 
+func (s *SecretService) DeleteItem(item dbus.ObjectPath) (err error) {
+	var prompt dbus.ObjectPath
+	err = s.Obj(item).
+		Call("org.freedesktop.Secret.Item.Delete", NilFlags).
+		Store(&prompt)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete item")
+	}
+	_, err = s.PromptAndWait(prompt)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *SecretService) GetAttributes(item dbus.ObjectPath) (attributes Attributes, err error) {
+	attributesV, err := s.Obj(item).GetProperty("org.freedesktop.Secret.Item.Attributes")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get attributes for item")
+	}
+	attributes, ok := attributesV.Value().(Attributes)
+	if !ok {
+		return nil, errors.Wrap(err, "failed to coerce attributes variant")
+	}
+	return attributes, nil
+}
+
 func (s *SecretService) GetSecret(item dbus.ObjectPath, session dbus.ObjectPath) (secret *Secret, err error) {
 	var secretI []interface{}
 	err = s.Obj(item).
-		Call("org.freedesktop.Secret.Item.GetSecret", 0, session).
+		Call("org.freedesktop.Secret.Item.GetSecret", NilFlags, session).
 		Store(&secretI)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get secret")
@@ -111,7 +140,7 @@ func (s *SecretService) Unlock(items []dbus.ObjectPath) (err error) {
 	var dummy []dbus.ObjectPath
 	var prompt dbus.ObjectPath
 	err = s.ServiceObj().
-		Call("org.freedesktop.Secret.Service.Unlock", 0, items).
+		Call("org.freedesktop.Secret.Service.Unlock", NilFlags, items).
 		Store(&dummy, &prompt)
 	if err != nil {
 		return errors.Wrap(err, "failed to unlock items")
@@ -128,7 +157,7 @@ func (s *SecretService) LockItems(items []dbus.ObjectPath) (err error) {
 	var dummy []dbus.ObjectPath
 	var prompt dbus.ObjectPath
 	err = s.ServiceObj().
-		Call("org.freedesktop.Secret.Service.Lock", 0, items).
+		Call("org.freedesktop.Secret.Service.Lock", NilFlags, items).
 		Store(&dummy, &prompt)
 	if err != nil {
 		return errors.Wrap(err, "failed to lock items")
@@ -147,7 +176,7 @@ func (s *SecretService) PromptAndWait(prompt dbus.ObjectPath) (paths *dbus.Varia
 	if prompt == NullPrompt {
 		return nil, nil
 	}
-	call := s.Obj(prompt).Call("org.freedesktop.Secret.Prompt.Prompt", 0, "Keyring Prompt")
+	call := s.Obj(prompt).Call("org.freedesktop.Secret.Prompt.Prompt", NilFlags, "Keyring Prompt")
 	if call.Err != nil {
 		return nil, errors.Wrap(err, "failed to prompt")
 	}
@@ -169,6 +198,13 @@ func (s *SecretService) PromptAndWait(prompt dbus.ObjectPath) (paths *dbus.Varia
 		case <-time.After(30 * time.Second):
 			return nil, errors.New("prompt timed out")
 		}
+	}
+}
+
+func NewSecretProperties(label string, attributes map[string]string) map[string]dbus.Variant {
+	return map[string]dbus.Variant{
+		"org.freedesktop.Secret.Item.Label":      dbus.MakeVariant(label),
+		"org.freedesktop.Secret.Item.Attributes": dbus.MakeVariant(attributes),
 	}
 }
 
@@ -201,11 +237,6 @@ func main2() error {
 		return err
 	}
 	props := make(map[string]dbus.Variant)
-	props["org.freedesktop.Secret.Item.Label"] = dbus.MakeVariant("alice@keybaseee")
-	props["org.freedesktop.Secret.Item.Attributes"] = dbus.MakeVariant(map[string]string{
-		"service":  "keybase",
-		"username": "t_alice",
-	})
 	newSecret := Secret{
 		Session:     session,
 		Parameters:  nil,
@@ -224,15 +255,16 @@ func main2() error {
 	return nil
 }
 
-func main() {
-	err := main2()
-	if err != nil {
-		panic(fmt.Sprintf("%+v\n", err))
-	}
-}
+// func main() {
+// 	err := main2()
+// 	if err != nil {
+// 		panic(fmt.Sprintf("%+v\n", err))
+// 	}
+// }
 
 // TODO does default collection always exist..? (no)
 // TODO fallback if no gnome-keyring EXPL
 // upgrade path...?
 // if there are more than 1, what should we do? just delete all of them and fail?
 // TODO dh ietf
+// TODO replacebehavior type
