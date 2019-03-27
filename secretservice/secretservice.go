@@ -171,6 +171,14 @@ func (s *SecretService) LockItems(items []dbus.ObjectPath) (err error) {
 	return nil
 }
 
+type PromptDismissedError struct {
+	err error
+}
+
+func (p PromptDismissedError) Error() string {
+	return p.err.Error()
+}
+
 // PromptAndWait is NOT thread-safe.
 func (s *SecretService) PromptAndWait(prompt dbus.ObjectPath) (paths *dbus.Variant, err error) {
 	if prompt == NullPrompt {
@@ -192,7 +200,7 @@ func (s *SecretService) PromptAndWait(prompt dbus.ObjectPath) (paths *dbus.Varia
 				return nil, errors.Wrap(err, "failed to unmarshal prompt result")
 			}
 			if result.Dismissed {
-				return nil, errors.New("prompt dismissed")
+				return nil, PromptDismissedError{errors.New("prompt dismissed")}
 			}
 			return &result.Paths, nil
 		case <-time.After(30 * time.Second):
