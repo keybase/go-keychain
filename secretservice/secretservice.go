@@ -276,3 +276,4 @@ func main2() error {
 // if there are more than 1, what should we do? just delete all of them and fail?
 // TODO dh ietf
 // TODO replacebehavior type
+// TODO close session
