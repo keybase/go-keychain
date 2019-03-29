@@ -2,6 +2,7 @@ package secretservice
 
 import (
 	"fmt"
+	"math/big"
 	"time"
 
 	dbus "github.com/guelfey/go.dbus"
@@ -15,6 +16,7 @@ const DefaultCollection dbus.ObjectPath = "/org/freedesktop/secrets/aliases/defa
 type authenticationMode string
 
 const AuthenticationPlain authenticationMode = "plain"
+const AuthenticationDHIETF1024SHA256AES128CBCPKCS7 authenticationMode = "dh-ietf1024-sha256-aes128-cbc-pkcs7"
 
 const NilFlags = 0
 
@@ -37,6 +39,14 @@ type SecretService struct {
 	signalCh <-chan *dbus.Signal
 }
 
+type Session struct {
+	Mode    authenticationMode
+	Path    dbus.ObjectPath
+	Public  *big.Int
+	Private *big.Int
+	AESKey  []byte
+}
+
 func NewService() (*SecretService, error) {
 	conn, err := dbus.SessionBus()
 	if err != nil {
@@ -55,14 +65,59 @@ func (s *SecretService) Obj(path dbus.ObjectPath) *dbus.Object {
 	return s.conn.Object(SecretServiceInterface, path)
 }
 
-func (s *SecretService) OpenSession(mode authenticationMode) (session dbus.ObjectPath, err error) {
-	var dummy dbus.Variant
-	err = s.ServiceObj().
-		Call("org.freedesktop.Secret.Service.OpenSession", NilFlags, mode, dbus.MakeVariant("")).
-		Store(&dummy, &session)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to open secretservice session")
+func (s *SecretService) OpenSession(mode authenticationMode) (session *Session, err error) {
+	var sessionAlgorithmInput dbus.Variant
+
+	session = new(Session)
+
+	session.Mode = mode
+
+	switch mode {
+	case AuthenticationPlain:
+		sessionAlgorithmInput = dbus.MakeVariant("")
+	case AuthenticationDHIETF1024SHA256AES128CBCPKCS7:
+		group := RFC2409SecondOakleyGroup()
+		private, public, err := group.NewKeypair()
+		if err != nil {
+			return nil, err
+		}
+		session.Private = private
+		session.Public = public
+		sessionAlgorithmInput = dbus.MakeVariant(public.Bytes()) // math/big.Int.Bytes is big endian
+	default:
+		return nil, fmt.Errorf("unknown authentication mode %v", mode)
 	}
+
+	var sessionAlgorithmOutput dbus.Variant
+	err = s.ServiceObj().
+		Call("org.freedesktop.Secret.Service.OpenSession", NilFlags, mode, sessionAlgorithmInput).
+		Store(&sessionAlgorithmOutput, &session)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to open secretservice session")
+	}
+
+	switch mode {
+	case AuthenticationPlain:
+	case AuthenticationDHIETF1024SHA256AES128CBCPKCS7:
+		theirPublicBigEndian, ok := sessionAlgorithmOutput.Value().([]byte)
+		if !ok {
+			return nil, fmt.Errorf("failed to coerce algorithm output value to byteslice")
+		}
+		group := RFC2409SecondOakleyGroup()
+		theirPublic := new(big.Int)
+		err := theirPublic.UnmarshalText(theirPublicBigEndian)
+		if err != nil {
+			return nil, err
+		}
+		aesKey, err := group.KeygenHKDFSHA256AES128(theirPublic, session.Private)
+		if err != nil {
+			return nil, err
+		}
+		session.AESKey = aesKey
+	default:
+		return nil, fmt.Errorf("unknown authentication mode %v", mode)
+	}
+
 	return session, nil
 }
 
@@ -118,20 +173,34 @@ func (s *SecretService) GetAttributes(item dbus.ObjectPath) (attributes Attribut
 	return attributes, nil
 }
 
-func (s *SecretService) GetSecret(item dbus.ObjectPath, session dbus.ObjectPath) (secret *Secret, err error) {
+func (s *SecretService) GetSecret(item dbus.ObjectPath, session Session) (secretPlaintext []byte, err error) {
 	var secretI []interface{}
 	err = s.Obj(item).
-		Call("org.freedesktop.Secret.Item.GetSecret", NilFlags, session).
+		Call("org.freedesktop.Secret.Item.GetSecret", NilFlags, session.Path).
 		Store(&secretI)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get secret")
 	}
-	secret = new(Secret)
+	secret := new(Secret)
 	err = dbus.Store(secretI, &secret.Session, &secret.Parameters, &secret.Value, &secret.ContentType)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal get secret result")
 	}
-	return secret, nil
+
+	switch session.Mode {
+	case AuthenticationPlain:
+		secretPlaintext = secret.Value
+	case AuthenticationDHIETF1024SHA256AES128CBCPKCS7:
+		plaintext, err := UnauthenticatedAESCBCDecrypt(secret.Parameters, secret.Value, session.AESKey)
+		if err != nil {
+			return nil, nil
+		}
+		secretPlaintext = plaintext
+	default:
+		return nil, fmt.Errorf("cannot make secret for authentication mode %v", session.Mode)
+	}
+
+	return secretPlaintext, nil
 }
 
 const NullPrompt = "/"
@@ -216,6 +285,31 @@ func NewSecretProperties(label string, attributes map[string]string) map[string]
 	}
 }
 
+func (session *Session) NewSecret(secretBytes []byte) (Secret, error) {
+	switch session.Mode {
+	case AuthenticationPlain:
+		return Secret{
+			Session:     session.Path,
+			Parameters:  nil,
+			Value:       secretBytes,
+			ContentType: "application/octet-stream",
+		}, nil
+	case AuthenticationDHIETF1024SHA256AES128CBCPKCS7:
+		iv, ciphertext, err := UnauthenticatedAESCBCEncrypt(secretBytes, session.AESKey)
+		if err != nil {
+			return Secret{}, err
+		}
+		return Secret{
+			Session:     session.Path,
+			Parameters:  iv,
+			Value:       ciphertext,
+			ContentType: "application/octet-stream",
+		}, nil
+	default:
+		return Secret{}, fmt.Errorf("cannot make secret for authentication mode %v", session.Mode)
+	}
+}
+
 func main2() error {
 	srv, err := NewService()
 	if err != nil {
@@ -235,18 +329,18 @@ func main2() error {
 	if err != nil {
 		return err
 	}
-	secret, err := srv.GetSecret(item, session)
+	secret, err := srv.GetSecret(item, *session)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s\n", secret.Value)
+	fmt.Printf("%s\n", secret)
 	err = srv.LockItems([]dbus.ObjectPath{item})
 	if err != nil {
 		return err
 	}
 	props := make(map[string]dbus.Variant)
 	newSecret := Secret{
-		Session:     session,
+		Session:     session.Path,
 		Parameters:  nil,
 		Value:       []byte("naww"),
 		ContentType: "text/plain",
@@ -277,3 +371,4 @@ func main2() error {
 // TODO dh ietf
 // TODO replacebehavior type
 // TODO close session
+// TODO use different collection..
