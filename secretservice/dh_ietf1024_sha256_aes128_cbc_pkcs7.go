@@ -42,7 +42,7 @@ func (group *dhGroup) NewKeypair() (private *big.Int, public *big.Int, err error
 		}
 	}
 	public = new(big.Int).Exp(group.g, private, group.p)
-	return public, private, nil
+	return private, public, nil
 }
 
 func (group *dhGroup) diffieHellman(theirPublic, myPrivate *big.Int) (*big.Int, error) {
@@ -70,7 +70,7 @@ func (group *dhGroup) KeygenHKDFSHA256AES128(theirPublic *big.Int, myPrivate *bi
 
 	r := hkdf.New(sha256.New, sharedSecretBytes, nil, nil)
 
-	aesKey := make([]byte, 128)
+	aesKey := make([]byte, 16)
 	_, err = io.ReadFull(r, aesKey)
 	if err != nil {
 		return nil, err

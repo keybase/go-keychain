@@ -91,7 +91,7 @@ func (s *SecretService) OpenSession(mode authenticationMode) (session *Session, 
 	var sessionAlgorithmOutput dbus.Variant
 	err = s.ServiceObj().
 		Call("org.freedesktop.Secret.Service.OpenSession", NilFlags, mode, sessionAlgorithmInput).
-		Store(&sessionAlgorithmOutput, &session)
+		Store(&sessionAlgorithmOutput, &session.Path)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open secretservice session")
 	}
@@ -105,10 +105,7 @@ func (s *SecretService) OpenSession(mode authenticationMode) (session *Session, 
 		}
 		group := RFC2409SecondOakleyGroup()
 		theirPublic := new(big.Int)
-		err := theirPublic.UnmarshalText(theirPublicBigEndian)
-		if err != nil {
-			return nil, err
-		}
+		theirPublic.SetBytes(theirPublicBigEndian)
 		aesKey, err := group.KeygenHKDFSHA256AES128(theirPublic, session.Private)
 		if err != nil {
 			return nil, err
@@ -214,11 +211,10 @@ func (s *SecretService) Unlock(items []dbus.ObjectPath) (err error) {
 	if err != nil {
 		return errors.Wrap(err, "failed to unlock items")
 	}
-	paths, err := s.PromptAndWait(prompt)
+	_, err = s.PromptAndWait(prompt)
 	if err != nil {
 		return errors.Wrap(err, "failed to prompt")
 	}
-	fmt.Println("unlocked paths %+v", paths)
 	return nil
 }
 
@@ -231,12 +227,10 @@ func (s *SecretService) LockItems(items []dbus.ObjectPath) (err error) {
 	if err != nil {
 		return errors.Wrap(err, "failed to lock items")
 	}
-	paths, err := s.PromptAndWait(prompt)
+	_, err = s.PromptAndWait(prompt)
 	if err != nil {
 		return errors.Wrap(err, "failed to prompt")
 	}
-	fmt.Printf("unlocked paths %+v\n", paths)
-
 	return nil
 }
 
@@ -310,65 +304,7 @@ func (session *Session) NewSecret(secretBytes []byte) (Secret, error) {
 	}
 }
 
-func main2() error {
-	srv, err := NewService()
-	if err != nil {
-		return err
-	}
-	session, err := srv.OpenSession(AuthenticationPlain)
-	if err != nil {
-		return err
-	}
-	query := map[string]string{"service": "keybase", "username": "t_alice"}
-	items, err := srv.SearchCollection(DefaultCollection, query)
-	if err != nil {
-		return err
-	}
-	item := items[0] // panic if nej. if more than 1??
-	err = srv.Unlock([]dbus.ObjectPath{item})
-	if err != nil {
-		return err
-	}
-	secret, err := srv.GetSecret(item, *session)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("%s\n", secret)
-	err = srv.LockItems([]dbus.ObjectPath{item})
-	if err != nil {
-		return err
-	}
-	props := make(map[string]dbus.Variant)
-	newSecret := Secret{
-		Session:     session.Path,
-		Parameters:  nil,
-		Value:       []byte("naww"),
-		ContentType: "text/plain",
-	}
-	err = srv.Unlock([]dbus.ObjectPath{DefaultCollection})
-	if err != nil {
-		return err
-	}
-	newItem, err := srv.CreateItem(DefaultCollection, props, newSecret, true)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("%+v\n", newItem)
-	return nil
-}
-
-// func main() {
-// 	err := main2()
-// 	if err != nil {
-// 		panic(fmt.Sprintf("%+v\n", err))
-// 	}
-// }
-
-// TODO does default collection always exist..? (no)
-// TODO fallback if no gnome-keyring EXPL
-// upgrade path...?
 // if there are more than 1, what should we do? just delete all of them and fail?
-// TODO dh ietf
 // TODO replacebehavior type
 // TODO close session
 // TODO use different collection..
