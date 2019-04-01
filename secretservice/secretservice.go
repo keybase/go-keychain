@@ -303,8 +303,3 @@ func (session *Session) NewSecret(secretBytes []byte) (Secret, error) {
 		return Secret{}, fmt.Errorf("cannot make secret for authentication mode %v", session.Mode)
 	}
 }
-
-// if there are more than 1, what should we do? just delete all of them and fail?
-// TODO replacebehavior type
-// TODO close session
-// TODO use different collection..
