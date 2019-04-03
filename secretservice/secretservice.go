@@ -1,7 +1,6 @@
 package secretservice
 
 import (
-	"fmt"
 	"math/big"
 	"time"
 
@@ -11,12 +10,14 @@ import (
 
 const SecretServiceInterface = "org.freedesktop.secrets"
 const SecretServiceObjectPath dbus.ObjectPath = "/org/freedesktop/secrets"
+
+// DefaultCollection need not necessarily exist in the user's keyring.
 const DefaultCollection dbus.ObjectPath = "/org/freedesktop/secrets/aliases/default"
 
 type authenticationMode string
 
-const AuthenticationPlain authenticationMode = "plain"
-const AuthenticationDHIETF1024SHA256AES128CBCPKCS7 authenticationMode = "dh-ietf1024-sha256-aes128-cbc-pkcs7"
+const AuthenticationInsecurePlain authenticationMode = "plain"
+const AuthenticationDHAES authenticationMode = "dh-ietf1024-sha256-aes128-cbc-pkcs7"
 
 const NilFlags = 0
 
@@ -73,10 +74,10 @@ func (s *SecretService) OpenSession(mode authenticationMode) (session *Session, 
 	session.Mode = mode
 
 	switch mode {
-	case AuthenticationPlain:
+	case AuthenticationInsecurePlain:
 		sessionAlgorithmInput = dbus.MakeVariant("")
-	case AuthenticationDHIETF1024SHA256AES128CBCPKCS7:
-		group := RFC2409SecondOakleyGroup()
+	case AuthenticationDHAES:
+		group := rfc2409SecondOakleyGroup()
 		private, public, err := group.NewKeypair()
 		if err != nil {
 			return nil, err
@@ -85,7 +86,7 @@ func (s *SecretService) OpenSession(mode authenticationMode) (session *Session, 
 		session.Public = public
 		sessionAlgorithmInput = dbus.MakeVariant(public.Bytes()) // math/big.Int.Bytes is big endian
 	default:
-		return nil, fmt.Errorf("unknown authentication mode %v", mode)
+		return nil, errors.Errorf("unknown authentication mode %v", mode)
 	}
 
 	var sessionAlgorithmOutput dbus.Variant
@@ -97,25 +98,29 @@ func (s *SecretService) OpenSession(mode authenticationMode) (session *Session, 
 	}
 
 	switch mode {
-	case AuthenticationPlain:
-	case AuthenticationDHIETF1024SHA256AES128CBCPKCS7:
+	case AuthenticationInsecurePlain:
+	case AuthenticationDHAES:
 		theirPublicBigEndian, ok := sessionAlgorithmOutput.Value().([]byte)
 		if !ok {
-			return nil, fmt.Errorf("failed to coerce algorithm output value to byteslice")
+			return nil, errors.Errorf("failed to coerce algorithm output value to byteslice")
 		}
-		group := RFC2409SecondOakleyGroup()
+		group := rfc2409SecondOakleyGroup()
 		theirPublic := new(big.Int)
 		theirPublic.SetBytes(theirPublicBigEndian)
-		aesKey, err := group.KeygenHKDFSHA256AES128(theirPublic, session.Private)
+		aesKey, err := group.keygenHKDFSHA256AES128(theirPublic, session.Private)
 		if err != nil {
 			return nil, err
 		}
 		session.AESKey = aesKey
 	default:
-		return nil, fmt.Errorf("unknown authentication mode %v", mode)
+		return nil, errors.Errorf("unknown authentication mode %v", mode)
 	}
 
 	return session, nil
+}
+
+func (s *SecretService) CloseSession(session *Session) {
+	s.Obj(session.Path).Call("org.freedesktop.Secret.Session.Close", NilFlags)
 }
 
 func (s *SecretService) SearchCollection(collection dbus.ObjectPath, attributes Attributes) (items []dbus.ObjectPath, err error) {
@@ -128,7 +133,22 @@ func (s *SecretService) SearchCollection(collection dbus.ObjectPath, attributes 
 	return items, nil
 }
 
-func (s *SecretService) CreateItem(collection dbus.ObjectPath, properties map[string]dbus.Variant, secret Secret, replace bool) (item dbus.ObjectPath, err error) {
+type replaceBehavior int
+
+const ReplaceBehaviorDoNotReplace = 0
+const ReplaceBehaviorReplace = 1
+
+func (s *SecretService) CreateItem(collection dbus.ObjectPath, properties map[string]dbus.Variant, secret Secret, replaceBehavior replaceBehavior) (item dbus.ObjectPath, err error) {
+	var replace bool
+	switch replaceBehavior {
+	case ReplaceBehaviorDoNotReplace:
+		replace = false
+	case ReplaceBehaviorReplace:
+		replace = true
+	default:
+		return "", errors.Errorf("unknown replace behavior %v", replaceBehavior)
+	}
+
 	var prompt dbus.ObjectPath
 	err = s.Obj(collection).
 		Call("org.freedesktop.Secret.Collection.CreateItem", NilFlags, properties, secret, replace).
@@ -185,16 +205,16 @@ func (s *SecretService) GetSecret(item dbus.ObjectPath, session Session) (secret
 	}
 
 	switch session.Mode {
-	case AuthenticationPlain:
+	case AuthenticationInsecurePlain:
 		secretPlaintext = secret.Value
-	case AuthenticationDHIETF1024SHA256AES128CBCPKCS7:
-		plaintext, err := UnauthenticatedAESCBCDecrypt(secret.Parameters, secret.Value, session.AESKey)
+	case AuthenticationDHAES:
+		plaintext, err := unauthenticatedAESCBCDecrypt(secret.Parameters, secret.Value, session.AESKey)
 		if err != nil {
 			return nil, nil
 		}
 		secretPlaintext = plaintext
 	default:
-		return nil, fmt.Errorf("cannot make secret for authentication mode %v", session.Mode)
+		return nil, errors.Errorf("cannot make secret for authentication mode %v", session.Mode)
 	}
 
 	return secretPlaintext, nil
@@ -281,15 +301,15 @@ func NewSecretProperties(label string, attributes map[string]string) map[string]
 
 func (session *Session) NewSecret(secretBytes []byte) (Secret, error) {
 	switch session.Mode {
-	case AuthenticationPlain:
+	case AuthenticationInsecurePlain:
 		return Secret{
 			Session:     session.Path,
 			Parameters:  nil,
 			Value:       secretBytes,
 			ContentType: "application/octet-stream",
 		}, nil
-	case AuthenticationDHIETF1024SHA256AES128CBCPKCS7:
-		iv, ciphertext, err := UnauthenticatedAESCBCEncrypt(secretBytes, session.AESKey)
+	case AuthenticationDHAES:
+		iv, ciphertext, err := unauthenticatedAESCBCEncrypt(secretBytes, session.AESKey)
 		if err != nil {
 			return Secret{}, err
 		}
@@ -300,6 +320,6 @@ func (session *Session) NewSecret(secretBytes []byte) (Secret, error) {
 			ContentType: "application/octet-stream",
 		}, nil
 	default:
-		return Secret{}, fmt.Errorf("cannot make secret for authentication mode %v", session.Mode)
+		return Secret{}, errors.Errorf("cannot make secret for authentication mode %v", session.Mode)
 	}
 }
