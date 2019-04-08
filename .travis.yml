@@ -1,6 +1,8 @@
 language: go
 
-os: osx
+os:
+    - osx
+    - linux
 
 before_install:
   - go get golang.org/x/lint/golint
@@ -8,10 +10,9 @@ before_install:
 script:
   - go vet ./...
   - golint ./...
-  - go test ./...
+  - go test -tags skipsecretserviceintegrationtests ./...
 
 go:
-  - 1.9.x
   - 1.10.x
   - 1.11.x
   - master
