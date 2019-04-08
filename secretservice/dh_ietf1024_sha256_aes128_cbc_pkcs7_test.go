@@ -39,6 +39,17 @@ func TestEncryption(t *testing.T) {
 	require.Equal(t, plaintext, gotPlaintext)
 }
 
+func TestEncryptionRng(t *testing.T) {
+	key := []byte("YELLOW SUBMARINE")
+	plaintext := []byte("hello world")
+	iv1, ciphertext1, err := unauthenticatedAESCBCEncrypt(plaintext, key)
+	require.NoError(t, err)
+	iv2, ciphertext2, err := unauthenticatedAESCBCEncrypt(plaintext, key)
+	require.NoError(t, err)
+	require.NotEqual(t, iv1, iv2)
+	require.NotEqual(t, ciphertext1, ciphertext2)
+}
+
 var pkcs7tests = []struct {
 	in  []byte
 	out []byte
