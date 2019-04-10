@@ -58,3 +58,29 @@ func testKeyring(t *testing.T, mode authenticationMode) {
 	require.NoError(t, err)
 
 }
+
+func TestGetAll(t *testing.T) {
+	srv, err := NewService()
+	require.NoError(t, err)
+	session, err := srv.OpenSession(AuthenticationDHAES)
+	require.NoError(t, err)
+	defer srv.CloseSession(session)
+
+	collection := DefaultCollection
+
+	secret, err := session.NewSecret([]byte("secret"))
+	require.NoError(t, err)
+
+	err = srv.Unlock([]dbus.ObjectPath{collection})
+	require.NoError(t, err)
+
+	item, err := srv.CreateItem(collection, NewSecretProperties("testlabel", map[string]string{"username": "testuser"}), secret, ReplaceBehaviorReplace)
+	require.NoError(t, err)
+
+	attrs, err := srv.GetAttributes(item)
+	require.NoError(t, err)
+	require.Equal(t, attrs["username"], "testuser")
+
+	err = srv.DeleteItem(item)
+	require.NoError(t, err)
+}
