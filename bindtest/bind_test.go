@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/keybase/go-keychain/bind"
+	"github.com/stretchr/testify/require"
 )
 
 type test struct {
@@ -13,7 +14,7 @@ type test struct {
 }
 
 func (t test) Fail(s string) {
-	t.t.Fatal(s)
+	require.Fail(t.t, s)
 }
 
 func TestGenericPassword(t *testing.T) {

@@ -151,6 +151,7 @@ func GenericPasswordTest(t Test, service string, accessGroup string) {
 
 	// Test removed
 	query3 := keychain.NewItem()
+	query3.SetSecClass(keychain.SecClassGenericPassword)
 	query3.SetService(service)
 	query3.SetAccount(account)
 	query3.SetAccessGroup(accessGroup)
