@@ -13,6 +13,7 @@ func TestNewKeypair(t *testing.T) {
 	require.NotNil(t, private)
 	require.NotNil(t, public)
 	private2, public2, err := group.NewKeypair()
+	require.NoError(t, err)
 	require.NotEqual(t, private.Cmp(private2), 0, "should get different private key with every keygen")
 	require.NotEqual(t, public.Cmp(public2), 0, "should get different public key with every keygen")
 }
@@ -25,7 +26,9 @@ func TestKeygen(t *testing.T) {
 	require.NoError(t, err)
 
 	myKey, err := group.keygenHKDFSHA256AES128(theirPublic, myPrivate)
+	require.NoError(t, err)
 	theirKey, err := group.keygenHKDFSHA256AES128(myPublic, theirPrivate)
+	require.NoError(t, err)
 	require.Equal(t, myKey, theirKey)
 }
 
