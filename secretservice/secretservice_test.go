@@ -9,7 +9,7 @@ package secretservice
 import (
 	"testing"
 
-	dbus "github.com/guelfey/go.dbus"
+	dbus "github.com/keybase/go.dbus"
 	"github.com/stretchr/testify/require"
 )
 
