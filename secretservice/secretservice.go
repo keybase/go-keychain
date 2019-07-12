@@ -79,15 +79,10 @@ type sessionOpenResponse struct {
 }
 
 func (s *SecretService) openSessionRaw(mode authenticationMode, sessionAlgorithmInput dbus.Variant) (resp sessionOpenResponse, err error) {
-	var sessionAlgorithmOutput dbus.Variant
-	var path dbus.ObjectPath
 	err = s.ServiceObj().
 		Call("org.freedesktop.Secret.Service.OpenSession", NilFlags, mode, sessionAlgorithmInput).
-		Store(&sessionAlgorithmOutput, &path)
-	if err != nil {
-		return sessionOpenResponse{}, errors.Wrap(err, "failed to open secretservice session")
-	}
-	return sessionOpenResponse{sessionAlgorithmOutput, path}, nil
+		Store(&resp.algorithmOutput, &resp.path)
+	return resp, errors.Wrap(err, "failed to open secretservice session")
 }
 
 func (s *SecretService) OpenSession(mode authenticationMode) (session *Session, err error) {
