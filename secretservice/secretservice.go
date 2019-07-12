@@ -120,6 +120,11 @@ func (s *SecretService) OpenSession(mode authenticationMode) (session *Session, 
 	}()
 
 	var sessionAlgorithmOutput dbus.Variant
+	// NOTE: If the timeout case is reached, the above goroutine is leaked.
+	// This is not terrible because D-Bus calls have an internal 2-mintue
+	// timeout, so the goroutine will finish eventually. If two OpenSessions
+	// are called at the saime time, they'll be on different channels so
+	// they won't interfere with each other.
 	select {
 	case resp := <-sessionOpenCh:
 		sessionAlgorithmOutput = resp.algorithmOutput
