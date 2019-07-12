@@ -36,8 +36,9 @@ type PromptCompletedResult struct {
 }
 
 type SecretService struct {
-	conn     *dbus.Conn
-	signalCh <-chan *dbus.Signal
+	conn               *dbus.Conn
+	signalCh           <-chan *dbus.Signal
+	sessionOpenTimeout time.Duration
 }
 
 type Session struct {
@@ -48,6 +49,8 @@ type Session struct {
 	AESKey  []byte
 }
 
+const DefaultSessionOpenTimeout = 10 * time.Second
+
 func NewService() (*SecretService, error) {
 	conn, err := dbus.SessionBus()
 	if err != nil {
@@ -55,7 +58,11 @@ func NewService() (*SecretService, error) {
 	}
 	signalCh := make(chan *dbus.Signal, 16)
 	conn.Signal(signalCh)
-	return &SecretService{conn: conn, signalCh: signalCh}, nil
+	return &SecretService{conn: conn, signalCh: signalCh, sessionOpenTimeout: DefaultSessionOpenTimeout}, nil
+}
+
+func (s *SecretService) SetSessionOpenTimeout(d time.Duration) {
+	s.sessionOpenTimeout = d
 }
 
 func (s *SecretService) ServiceObj() *dbus.Object {
@@ -64,6 +71,23 @@ func (s *SecretService) ServiceObj() *dbus.Object {
 
 func (s *SecretService) Obj(path dbus.ObjectPath) *dbus.Object {
 	return s.conn.Object(SecretServiceInterface, path)
+}
+
+type sessionOpenResponse struct {
+	algorithmOutput dbus.Variant
+	path            dbus.ObjectPath
+}
+
+func (s *SecretService) openSessionRaw(mode authenticationMode, sessionAlgorithmInput dbus.Variant) (resp sessionOpenResponse, err error) {
+	var sessionAlgorithmOutput dbus.Variant
+	var path dbus.ObjectPath
+	err = s.ServiceObj().
+		Call("org.freedesktop.Secret.Service.OpenSession", NilFlags, mode, sessionAlgorithmInput).
+		Store(&sessionAlgorithmOutput, &path)
+	if err != nil {
+		return sessionOpenResponse{}, errors.Wrap(err, "failed to open secretservice session")
+	}
+	return sessionOpenResponse{sessionAlgorithmOutput, path}, nil
 }
 
 func (s *SecretService) OpenSession(mode authenticationMode) (session *Session, err error) {
@@ -89,12 +113,26 @@ func (s *SecretService) OpenSession(mode authenticationMode) (session *Session, 
 		return nil, errors.Errorf("unknown authentication mode %v", mode)
 	}
 
+	sessionOpenCh := make(chan sessionOpenResponse)
+	errCh := make(chan error)
+	go func() {
+		sessionOpenResponse, err := s.openSessionRaw(mode, sessionAlgorithmInput)
+		if err != nil {
+			errCh <- err
+		} else {
+			sessionOpenCh <- sessionOpenResponse
+		}
+	}()
+
 	var sessionAlgorithmOutput dbus.Variant
-	err = s.ServiceObj().
-		Call("org.freedesktop.Secret.Service.OpenSession", NilFlags, mode, sessionAlgorithmInput).
-		Store(&sessionAlgorithmOutput, &session.Path)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to open secretservice session")
+	select {
+	case resp := <-sessionOpenCh:
+		sessionAlgorithmOutput = resp.algorithmOutput
+		session.Path = resp.path
+	case err := <-errCh:
+		return nil, err
+	case <-time.After(s.sessionOpenTimeout):
+		return nil, errors.Errorf("timed out after %s", s.sessionOpenTimeout)
 	}
 
 	switch mode {
