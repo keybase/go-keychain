@@ -1,5 +1,4 @@
 // +build darwin
-// +build go1.10
 
 package keychain
 
@@ -430,7 +429,7 @@ func attrKey(ref C.CFTypeRef) string {
 }
 
 func convertResult(d C.CFDictionaryRef) (*QueryResult, error) {
-	m := CFDictionaryToMap(C.CFDictionaryRef(d))
+	m := CFDictionaryToMap(d)
 	result := QueryResult{}
 	for k, v := range m {
 		switch attrKey(k) {
