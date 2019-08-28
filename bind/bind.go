@@ -45,8 +45,8 @@ func GenericPasswordTest(t Test, service string, accessGroup string) {
 	item2 := keychain.NewGenericPassword(service, account2, "", []byte("toomanysecrets2"), accessGroup)
 
 	// Cleanup
-	defer keychain.DeleteItem(item)
-	defer keychain.DeleteItem(item2)
+	defer func() { _ = keychain.DeleteItem(item) }()
+	defer func() { _ = keychain.DeleteItem(item2) }()
 
 	// Test account names empty
 	accounts, err := keychain.GetGenericPasswordAccounts(service)
