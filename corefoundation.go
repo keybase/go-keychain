@@ -78,7 +78,7 @@ func MapToCFDictionary(m map[C.CFTypeRef]C.CFTypeRef) (C.CFDictionaryRef, error)
 		valuesPointer = &values[0]
 	}
 	cfDict := C.CFDictionaryCreateSafe2(C.kCFAllocatorDefault, keysPointer, valuesPointer, C.CFIndex(numValues),
-		&C.kCFTypeDictionaryKeyCallBacks, &C.kCFTypeDictionaryValueCallBacks) // nolint
+		&C.kCFTypeDictionaryKeyCallBacks, &C.kCFTypeDictionaryValueCallBacks) //nolint
 	if cfDict == 0 {
 		return 0, fmt.Errorf("CFDictionaryCreate failed")
 	}
@@ -150,7 +150,7 @@ func ArrayToCFArray(a []C.CFTypeRef) C.CFArrayRef {
 	if numValues > 0 {
 		valuesPointer = &values[0]
 	}
-	return C.CFArrayCreateSafe2(C.kCFAllocatorDefault, valuesPointer, C.CFIndex(numValues), &C.kCFTypeArrayCallBacks) // nolint
+	return C.CFArrayCreateSafe2(C.kCFAllocatorDefault, valuesPointer, C.CFIndex(numValues), &C.kCFTypeArrayCallBacks) //nolint
 }
 
 // CFArrayToArray converts a CFArrayRef to an array of CFTypes.
@@ -293,66 +293,66 @@ func CFNumberToInterface(cfNumber C.CFNumberRef) interface{} {
 	switch typ {
 	case C.kCFNumberSInt8Type:
 		var sint C.SInt8
-		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&sint)) // nolint
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&sint)) //nolint
 		return int8(sint)
 	case C.kCFNumberSInt16Type:
 		var sint C.SInt16
-		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&sint)) // nolint
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&sint)) //nolint
 		return int16(sint)
 	case C.kCFNumberSInt32Type:
 		var sint C.SInt32
-		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&sint)) // nolint
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&sint)) //nolint
 		return int32(sint)
 	case C.kCFNumberSInt64Type:
 		var sint C.SInt64
-		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&sint)) // nolint
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&sint)) //nolint
 		return int64(sint)
 	case C.kCFNumberFloat32Type:
 		var float C.Float32
-		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&float)) // nolint
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&float)) //nolint
 		return float32(float)
 	case C.kCFNumberFloat64Type:
 		var float C.Float64
-		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&float)) // nolint
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&float)) //nolint
 		return float64(float)
 	case C.kCFNumberCharType:
 		var char C.char
-		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&char)) // nolint
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&char)) //nolint
 		return byte(char)
 	case C.kCFNumberShortType:
 		var short C.short
-		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&short)) // nolint
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&short)) //nolint
 		return int16(short)
 	case C.kCFNumberIntType:
 		var i C.int
-		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&i)) // nolint
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&i)) //nolint
 		return int32(i)
 	case C.kCFNumberLongType:
 		var long C.long
-		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&long)) // nolint
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&long)) //nolint
 		return int(long)
 	case C.kCFNumberLongLongType:
 		// This is the only type that may actually overflow us
 		var longlong C.longlong
-		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&longlong)) // nolint
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&longlong)) //nolint
 		return int64(longlong)
 	case C.kCFNumberFloatType:
 		var float C.float
-		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&float)) // nolint
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&float)) //nolint
 		return float32(float)
 	case C.kCFNumberDoubleType:
 		var double C.double
-		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&double)) // nolint
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&double)) //nolint
 		return float64(double)
 	case C.kCFNumberCFIndexType:
 		// CFIndex is a long
 		var index C.CFIndex
-		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&index)) // nolint
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&index)) //nolint
 		return int(index)
 	case C.kCFNumberNSIntegerType:
 		// We don't have a definition of NSInteger, but we know it's either an int or a long
 		var nsInt C.long
-		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&nsInt)) // nolint
+		C.CFNumberGetValue(cfNumber, typ, unsafe.Pointer(&nsInt)) //nolint
 		return int(nsInt)
 	}
 	panic("Unknown CFNumber type")

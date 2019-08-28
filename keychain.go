@@ -365,7 +365,7 @@ func QueryItemRef(item Item) (C.CFTypeRef, error) {
 	defer Release(C.CFTypeRef(cfDict))
 
 	var resultsRef C.CFTypeRef
-	errCode := C.SecItemCopyMatching(cfDict, &resultsRef) // nolint
+	errCode := C.SecItemCopyMatching(cfDict, &resultsRef) //nolint
 	if Error(errCode) == ErrorItemNotFound {
 		return 0, nil
 	}

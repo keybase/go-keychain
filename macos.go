@@ -66,7 +66,7 @@ func createAccess(label string, trustedApplications []string) (C.CFTypeRef, erro
 	}
 
 	var access C.SecAccessRef
-	errCode := C.SecAccessCreate(labelRef, trustedApplicationsArray, &access) // nolint
+	errCode := C.SecAccessCreate(labelRef, trustedApplicationsArray, &access) //nolint
 	err = checkError(errCode)
 	if err != nil {
 		return 0, err
@@ -85,7 +85,7 @@ func createTrustedApplication(trustedApplication string) (C.CFTypeRef, error) {
 	}
 
 	var trustedApplicationRef C.SecTrustedApplicationRef
-	errCode := C.SecTrustedApplicationCreateFromPath(trustedApplicationCStr, &trustedApplicationRef) // nolint
+	errCode := C.SecTrustedApplicationCreateFromPath(trustedApplicationCStr, &trustedApplicationRef) //nolint
 	err := checkError(errCode)
 	if err != nil {
 		return 0, err
@@ -151,7 +151,7 @@ func newKeychain(path, password string, promptUser bool) (Keychain, error) {
 	var kref C.SecKeychainRef
 
 	if promptUser {
-		errCode = C.SecKeychainCreate(pathRef, C.UInt32(0), nil, C.Boolean(1), 0, &kref) // nolint
+		errCode = C.SecKeychainCreate(pathRef, C.UInt32(0), nil, C.Boolean(1), 0, &kref) //nolint
 	} else {
 		passwordRef := C.CString(password)
 		defer C.free(unsafe.Pointer(passwordRef))
@@ -196,7 +196,7 @@ func openKeychainRef(path string) (C.SecKeychainRef, error) {
 	defer C.free(unsafe.Pointer(pathName))
 
 	var kref C.SecKeychainRef
-	if err := checkError(C.SecKeychainOpen(pathName, &kref)); err != nil { // nolint
+	if err := checkError(C.SecKeychainOpen(pathName, &kref)); err != nil { //nolint
 		return 0, err
 	}
 
