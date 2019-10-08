@@ -4,6 +4,7 @@ package keychain
 
 /*
 #cgo LDFLAGS: -framework CoreFoundation -framework Security
+#cgo CFLAGS: -w
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/Security.h>
