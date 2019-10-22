@@ -312,7 +312,10 @@ func (s *SecretService) PromptAndWait(prompt dbus.ObjectPath) (paths *dbus.Varia
 	for {
 		var result PromptCompletedResult
 		select {
-		case signal := <-s.signalCh:
+		case signal, ok := <-s.signalCh:
+			if !ok {
+				return nil, errors.New("prompt channel closed")
+			}
 			if signal == nil {
 				continue
 			}
