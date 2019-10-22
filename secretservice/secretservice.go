@@ -313,6 +313,9 @@ func (s *SecretService) PromptAndWait(prompt dbus.ObjectPath) (paths *dbus.Varia
 		var result PromptCompletedResult
 		select {
 		case signal := <-s.signalCh:
+			if signal == nil {
+				continue
+			}
 			if signal.Name != "org.freedesktop.Secret.Prompt.Completed" {
 				continue
 			}
