@@ -62,6 +62,8 @@ var (
 	ErrorDataNotAvailable = Error(C.errSecDataNotAvailable)
 	// ErrorDataNotModifiable corresponds to errSecDataNotModifiable result code
 	ErrorDataNotModifiable = Error(C.errSecDataNotModifiable)
+	// ErrorInvalidOwnerEdit corresponds to errSecInvalidOwnerEdit result code
+	ErrorInvalidOwnerEdit = Error(c.errSecInvalidOwnerEdit)
 )
 
 func checkError(errCode C.OSStatus) error {
@@ -115,6 +117,8 @@ func (k Error) Error() (msg string) {
 		msg = "The data is not available."
 	case ErrorDataNotModifiable:
 		msg = "The data is not modifiable."
+	case ErrorInvalidOwnerEdit:
+		msg = "An invalid attempt to change the owner of an item."
 	default:
 		msg = "Keychain Error."
 	}
