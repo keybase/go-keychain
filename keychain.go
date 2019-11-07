@@ -54,6 +54,14 @@ var (
 	ErrorWrongVersion = Error(C.errSecWrongSecVersion)
 	// ErrorReadonlyAttribute corresponds to errSecReadOnlyAttr result code
 	ErrorReadonlyAttribute = Error(C.errSecReadOnlyAttr)
+	// ErrorInvalidSearchRef corresponds to errSecInvalidSearchRef result code
+	ErrorInvalidSearchRef = Error(C.errSecInvalidSearchRef)
+	// ErrorInvalidItemRef corresponds to errSecInvalidItemRef result code
+	ErrorInvalidItemRef = Error(C.errSecInvalidItemRef)
+	// ErrorDataNotAvailable corresponds to errSecDataNotAvailable result code
+	ErrorDataNotAvailable = Error(C.errSecDataNotAvailable)
+	// ErrorDataNotModifiable corresponds to errSecDataNotModifiable result code
+	ErrorDataNotModifiable = Error(C.errSecDataNotModifiable)
 )
 
 func checkError(errCode C.OSStatus) error {
@@ -99,6 +107,14 @@ func (k Error) Error() (msg string) {
 		msg = "A keychain with the same name already exists."
 	case ErrorWrongVersion:
 		msg = "The version is incorrect."
+	case ErrorInvalidItemRef:
+		msg = "The item reference is invalid."
+	case ErrorInvalidSearchRef:
+		msg = "The search reference is invalid."
+	case ErrorDataNotAvailable:
+		msg = "The data is not available."
+	case ErrorDataNotModifiable:
+		msg = "The data is not modifiable."
 	default:
 		msg = "Keychain Error."
 	}
