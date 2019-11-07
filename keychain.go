@@ -63,7 +63,7 @@ var (
 	// ErrorDataNotModifiable corresponds to errSecDataNotModifiable result code
 	ErrorDataNotModifiable = Error(C.errSecDataNotModifiable)
 	// ErrorInvalidOwnerEdit corresponds to errSecInvalidOwnerEdit result code
-	ErrorInvalidOwnerEdit = Error(c.errSecInvalidOwnerEdit)
+	ErrorInvalidOwnerEdit = Error(C.errSecInvalidOwnerEdit)
 )
 
 func checkError(errCode C.OSStatus) error {
