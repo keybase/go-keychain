@@ -17,8 +17,7 @@ func TestAccess(t *testing.T) {
 	item := NewGenericPassword(service, account, label, []byte(password), accessGroup)
 	defer func() { _ = DeleteItem(item) }()
 
-	trustedApplications := []string{"/Applications/Mail.app"}
-	item.SetAccess(&Access{Label: "Mail", TrustedApplications: trustedApplications})
+	item.SetAccess(&Access{Label: "Mail"})
 	err = AddItem(item)
 	if err != nil {
 		t.Fatal(err)
@@ -37,7 +36,7 @@ func TestAccessWithImpliedSelf(t *testing.T) {
 	item := NewGenericPassword(service, account, label, []byte(password), accessGroup)
 	defer func() { _ = DeleteItem(item) }()
 
-	item.SetAccess(&Access{Label: "Self", TrustedApplications: nil})
+	item.SetAccess(&Access{Label: "Self"})
 	err = AddItem(item)
 	if err != nil {
 		t.Fatal(err)
@@ -55,8 +54,7 @@ func TestAccessWithoutTrust(t *testing.T) {
 	item := NewGenericPassword("TestAccess", "test2", "A label", []byte("toomanysecrets2"), "")
 	defer func() { _ = DeleteItem(item) }()
 
-	trustedApplications := []string{}
-	item.SetAccess(&Access{Label: "No Trust", TrustedApplications: trustedApplications})
+	item.SetAccess(&Access{Label: "No Trust"})
 	err = AddItem(item)
 	if err != nil {
 		t.Fatal(err)
@@ -140,17 +138,20 @@ func TestAddingAndQueryingNewKeychain(t *testing.T) {
 	}
 
 	// Search default keychain to make sure it's not there
-	queryDefault := NewItem()
-	queryDefault.SetSecClass(SecClassGenericPassword)
-	queryDefault.SetService(service)
-	queryDefault.SetMatchLimit(MatchLimitOne)
-	queryDefault.SetReturnData(true)
-	resultsDefault, err := QueryItem(queryDefault)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(resultsDefault) != 0 {
-		t.Fatalf("Expected no results")
+	if false {
+		// catalina: this causes password popup
+		queryDefault := NewItem()
+		queryDefault.SetSecClass(SecClassGenericPassword)
+		queryDefault.SetService(service)
+		queryDefault.SetMatchLimit(MatchLimitOne)
+		queryDefault.SetReturnData(true)
+		resultsDefault, err := QueryItem(queryDefault)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(resultsDefault) != 0 {
+			t.Fatalf("Expected no results")
+		}
 	}
 }
 
