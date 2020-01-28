@@ -190,6 +190,23 @@ var syncTypeRef = map[Synchronizable]C.CFTypeRef{
 	SynchronizableNo:  C.CFTypeRef(C.kCFBooleanFalse),
 }
 
+// DataProtection is the items data protection status
+type UseDataProtectionKeychain int
+
+const (
+	// UseDataProtectionKeychainYes enables data protection mode
+	UseDataProtectionKeychainYes = 1
+	// UseDataProtectionKeychainNo disables data protection mode
+	UseDataProtectionKeychainNo = 2
+)
+
+// DataProtectionKey is the key type for DataProtection
+var UseDataProtectionKey = attrKey(C.CFTypeRef(C.kSecUseDataProtectionKeychain))
+var dataProtectionTypeRef = map[UseDataProtectionKeychain]C.CFTypeRef{
+	UseDataProtectionKeychainYes: C.CFTypeRef(C.kCFBooleanTrue),
+	UseDataProtectionKeychainNo:  C.CFTypeRef(C.kCFBooleanFalse),
+}
+
 // Accessible is the items accessibility
 type Accessible int
 
@@ -301,6 +318,11 @@ func (k *Item) SetSynchronizable(sync Synchronizable) {
 	} else {
 		delete(k.attr, SynchronizableKey)
 	}
+}
+
+// SetSynchronizable sets the synchronizable attribute
+func (k *Item) SetUseDataProtectionKeychain(dataProtection UseDataProtectionKeychain) {
+	k.attr[UseDataProtectionKey] = dataProtectionTypeRef[dataProtection]
 }
 
 // SetAccessible sets the accessible attribute
