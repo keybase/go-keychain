@@ -6,6 +6,7 @@ os:
 
 before_install:
   - go get golang.org/x/lint/golint
+  - go mod tidy
 
 script:
   - go vet ./...
@@ -15,6 +16,5 @@ script:
   - go test -tags skipsecretserviceintegrationtests ./...
 
 go:
-  - 1.11.x
-  - 1.12.x
   - 1.13.x
+  - 1.14.x
