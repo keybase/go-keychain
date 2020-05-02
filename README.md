@@ -139,15 +139,6 @@ Using a Keychain at path:
 k, err := keychain.NewWithPath("mykeychain.keychain")
 ```
 
-Set a trusted applications for item (OS X only):
-
-```go
-item := keychain.NewGenericPassword("MyService", "gabriel", "A label", []byte("toomanysecrets"), "A123456789.group.com.mycorp")
-trustedApplications := []string{"/Applications/Mail.app"}
-item.SetAccess(&keychain.Access{Label: "Mail", TrustedApplications: trustedApplications})
-err := keychain.AddItem(item)
-```
-
 ## iOS
 
 Bindable package in `bind`. iOS project in `ios`. Run that project to test iOS.
