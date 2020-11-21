@@ -16,7 +16,7 @@ func RandomID(prefix string) (string, error) {
 		return "", err
 	}
 	str := base32.StdEncoding.EncodeToString(buf)
-	str = strings.Replace(str, "=", "", -1)
+	str = strings.ReplaceAll(str, "=", "")
 	str = prefix + str
 	return str, nil
 }
