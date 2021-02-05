@@ -1,0 +1,26 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, macOS-latest ]
+        go: [ '1.14', '1.15' ]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+      - name: Setup go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go }}
+      - run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - run: go get golang.org/x/lint/golint
+      - run: go mod tidy
+      - run: go vet ./...
+      - run: golint ./...
+      - run: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.32.2
+      - run: golangci-lint run
+      - run: go test -tags skipsecretserviceintegrationtests ./...
