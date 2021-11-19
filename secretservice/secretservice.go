@@ -171,12 +171,12 @@ func (s *SecretService) SearchCollection(collection dbus.ObjectPath, attributes 
 	return items, nil
 }
 
-type replaceBehavior int
+type ReplaceBehavior int
 
 const ReplaceBehaviorDoNotReplace = 0
 const ReplaceBehaviorReplace = 1
 
-func (s *SecretService) CreateItem(collection dbus.ObjectPath, properties map[string]dbus.Variant, secret Secret, replaceBehavior replaceBehavior) (item dbus.ObjectPath, err error) {
+func (s *SecretService) CreateItem(collection dbus.ObjectPath, properties map[string]dbus.Variant, secret Secret, replaceBehavior ReplaceBehavior) (item dbus.ObjectPath, err error) {
 	var replace bool
 	switch replaceBehavior {
 	case ReplaceBehaviorDoNotReplace:
