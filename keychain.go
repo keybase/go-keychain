@@ -1,3 +1,4 @@
+//go:build darwin
 // +build darwin
 
 package keychain
@@ -17,6 +18,20 @@ import (
 	"fmt"
 	"time"
 )
+
+// AccessibleKey is key for kSecAttrAccessible
+var AccessibleKey = attrKey(C.CFTypeRef(C.kSecAttrAccessible))
+var accessibleTypeRef = map[Accessible]C.CFTypeRef{
+	AccessibleWhenUnlocked:                   C.CFTypeRef(C.kSecAttrAccessibleWhenUnlocked),
+	AccessibleAfterFirstUnlock:               C.CFTypeRef(C.kSecAttrAccessibleAfterFirstUnlock),
+	AccessibleAlways:                         C.CFTypeRef(C.kSecAttrAccessibleAlways),
+	AccessibleWhenUnlockedThisDeviceOnly:     C.CFTypeRef(C.kSecAttrAccessibleWhenUnlockedThisDeviceOnly),
+	AccessibleAfterFirstUnlockThisDeviceOnly: C.CFTypeRef(C.kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly),
+	AccessibleAccessibleAlwaysThisDeviceOnly: C.CFTypeRef(C.kSecAttrAccessibleAlwaysThisDeviceOnly),
+
+	// Only available in 10.10
+	//AccessibleWhenPasscodeSetThisDeviceOnly:  C.CFTypeRef(C.kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly),
+}
 
 // Error defines keychain errors
 type Error int

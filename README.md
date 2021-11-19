@@ -112,33 +112,6 @@ if err == keychain.ErrorNotFound {
 }
 ```
 
-### OS X
-
-Creating a new keychain and add an item to it:
-
-```go
-
-// Add a new key chain into ~/Application Support/Keychains, with the provided password
-k, err := keychain.NewKeychain("mykeychain.keychain", "my keychain password")
-if err != nil {
-  // Error creating
-}
-
-// Create generic password item with service, account, label, password, access group
-item := keychain.NewGenericPassword("MyService", "gabriel", "A label", []byte("toomanysecrets"), "A123456789.group.com.mycorp")
-item.UseKeychain(k)
-err := keychain.AddItem(item)
-if err != nil {
-  // Error creating
-}
-```
-
-Using a Keychain at path:
-
-```go
-k, err := keychain.NewWithPath("mykeychain.keychain")
-```
-
 ## iOS
 
 Bindable package in `bind`. iOS project in `ios`. Run that project to test iOS.
