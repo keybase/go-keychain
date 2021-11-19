@@ -2,6 +2,7 @@
 // keyring with a default collection created.
 // It should prompt you for your keyring password twice.
 
+//go:build !skipsecretserviceintegrationtests
 // +build !skipsecretserviceintegrationtests
 
 package secretservice
@@ -21,7 +22,7 @@ func TestKeyringDH(t *testing.T) {
 	testKeyring(t, AuthenticationDHAES)
 }
 
-func testKeyring(t *testing.T, mode authenticationMode) {
+func testKeyring(t *testing.T, mode AuthenticationMode) {
 	srv, err := NewService()
 	require.NoError(t, err)
 	session, err := srv.OpenSession(AuthenticationDHAES)

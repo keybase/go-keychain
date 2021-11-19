@@ -6,7 +6,6 @@ os:
 
 before_install:
   - go get golang.org/x/lint/golint
-  - go mod tidy
 
 script:
   - go vet ./...

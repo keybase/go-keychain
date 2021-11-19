@@ -57,7 +57,7 @@ var (
 	ErrorDecode = Error(C.errSecDecode)
 	// ErrorNoSuchKeychain corresponds to errSecNoSuchKeychain result code
 	ErrorNoSuchKeychain = Error(C.errSecNoSuchKeychain)
-	// ErrorNoAcccessForItem corresponds to errSecNoAccessForItem result code
+	// ErrorNoAccessForItem corresponds to errSecNoAccessForItem result code
 	ErrorNoAccessForItem = Error(C.errSecNoAccessForItem)
 	// ErrorReadOnly corresponds to errSecReadOnly result code
 	ErrorReadOnly = Error(C.errSecReadOnly)

@@ -8,21 +8,31 @@ import (
 	errors "github.com/pkg/errors"
 )
 
+// SecretServiceInterface
 const SecretServiceInterface = "org.freedesktop.secrets"
+
+// SecretServiceObjectPath
 const SecretServiceObjectPath dbus.ObjectPath = "/org/freedesktop/secrets"
 
 // DefaultCollection need not necessarily exist in the user's keyring.
 const DefaultCollection dbus.ObjectPath = "/org/freedesktop/secrets/aliases/default"
 
-type authenticationMode string
+// AuthenticationMode
+type AuthenticationMode string
 
-const AuthenticationInsecurePlain authenticationMode = "plain"
-const AuthenticationDHAES authenticationMode = "dh-ietf1024-sha256-aes128-cbc-pkcs7"
+// AuthenticationInsecurePlain
+const AuthenticationInsecurePlain AuthenticationMode = "plain"
 
+// AuthenticationDHAES
+const AuthenticationDHAES AuthenticationMode = "dh-ietf1024-sha256-aes128-cbc-pkcs7"
+
+// NilFlags
 const NilFlags = 0
 
+// Attributes
 type Attributes map[string]string
 
+// Secret
 type Secret struct {
 	Session     dbus.ObjectPath
 	Parameters  []byte
@@ -30,27 +40,32 @@ type Secret struct {
 	ContentType string
 }
 
+// PromptCompletedResult
 type PromptCompletedResult struct {
 	Dismissed bool
 	Paths     dbus.Variant
 }
 
+// SecretService
 type SecretService struct {
 	conn               *dbus.Conn
 	signalCh           <-chan *dbus.Signal
 	sessionOpenTimeout time.Duration
 }
 
+// Session
 type Session struct {
-	Mode    authenticationMode
+	Mode    AuthenticationMode
 	Path    dbus.ObjectPath
 	Public  *big.Int
 	Private *big.Int
 	AESKey  []byte
 }
 
+// DefaultSessionOpenTimeout
 const DefaultSessionOpenTimeout = 10 * time.Second
 
+// NewService
 func NewService() (*SecretService, error) {
 	conn, err := dbus.SessionBus()
 	if err != nil {
@@ -61,14 +76,17 @@ func NewService() (*SecretService, error) {
 	return &SecretService{conn: conn, signalCh: signalCh, sessionOpenTimeout: DefaultSessionOpenTimeout}, nil
 }
 
+// SetSessionOpenTimeout
 func (s *SecretService) SetSessionOpenTimeout(d time.Duration) {
 	s.sessionOpenTimeout = d
 }
 
+// ServiceObj
 func (s *SecretService) ServiceObj() *dbus.Object {
 	return s.conn.Object(SecretServiceInterface, SecretServiceObjectPath)
 }
 
+// Obj
 func (s *SecretService) Obj(path dbus.ObjectPath) *dbus.Object {
 	return s.conn.Object(SecretServiceInterface, path)
 }
@@ -78,14 +96,15 @@ type sessionOpenResponse struct {
 	path            dbus.ObjectPath
 }
 
-func (s *SecretService) openSessionRaw(mode authenticationMode, sessionAlgorithmInput dbus.Variant) (resp sessionOpenResponse, err error) {
+func (s *SecretService) openSessionRaw(mode AuthenticationMode, sessionAlgorithmInput dbus.Variant) (resp sessionOpenResponse, err error) {
 	err = s.ServiceObj().
 		Call("org.freedesktop.Secret.Service.OpenSession", NilFlags, mode, sessionAlgorithmInput).
 		Store(&resp.algorithmOutput, &resp.path)
 	return resp, errors.Wrap(err, "failed to open secretservice session")
 }
 
-func (s *SecretService) OpenSession(mode authenticationMode) (session *Session, err error) {
+// OpenSession
+func (s *SecretService) OpenSession(mode AuthenticationMode) (session *Session, err error) {
 	var sessionAlgorithmInput dbus.Variant
 
 	session = new(Session)
@@ -157,10 +176,12 @@ func (s *SecretService) OpenSession(mode authenticationMode) (session *Session, 
 	return session, nil
 }
 
+// CloseSession
 func (s *SecretService) CloseSession(session *Session) {
 	s.Obj(session.Path).Call("org.freedesktop.Secret.Session.Close", NilFlags)
 }
 
+// SearchColleciton
 func (s *SecretService) SearchCollection(collection dbus.ObjectPath, attributes Attributes) (items []dbus.ObjectPath, err error) {
 	err = s.Obj(collection).
 		Call("org.freedesktop.Secret.Collection.SearchItems", NilFlags, attributes).
@@ -171,11 +192,16 @@ func (s *SecretService) SearchCollection(collection dbus.ObjectPath, attributes 
 	return items, nil
 }
 
+// ReplaceBehavior
 type ReplaceBehavior int
 
+// ReplaceBehaviorDoNotReplace
 const ReplaceBehaviorDoNotReplace = 0
+
+// ReplaceBehaviorReplace
 const ReplaceBehaviorReplace = 1
 
+// CreateItem
 func (s *SecretService) CreateItem(collection dbus.ObjectPath, properties map[string]dbus.Variant, secret Secret, replaceBehavior ReplaceBehavior) (item dbus.ObjectPath, err error) {
 	var replace bool
 	switch replaceBehavior {
@@ -201,6 +227,7 @@ func (s *SecretService) CreateItem(collection dbus.ObjectPath, properties map[st
 	return item, nil
 }
 
+// DeleteItem
 func (s *SecretService) DeleteItem(item dbus.ObjectPath) (err error) {
 	var prompt dbus.ObjectPath
 	err = s.Obj(item).
@@ -216,6 +243,7 @@ func (s *SecretService) DeleteItem(item dbus.ObjectPath) (err error) {
 	return nil
 }
 
+// GetAttributes
 func (s *SecretService) GetAttributes(item dbus.ObjectPath) (attributes Attributes, err error) {
 	attributesV, err := s.Obj(item).GetProperty("org.freedesktop.Secret.Item.Attributes")
 	if err != nil {
@@ -228,6 +256,7 @@ func (s *SecretService) GetAttributes(item dbus.ObjectPath) (attributes Attribut
 	return Attributes(attributesMap), nil
 }
 
+// GetSecret
 func (s *SecretService) GetSecret(item dbus.ObjectPath, session Session) (secretPlaintext []byte, err error) {
 	var secretI []interface{}
 	err = s.Obj(item).
@@ -258,8 +287,10 @@ func (s *SecretService) GetSecret(item dbus.ObjectPath, session Session) (secret
 	return secretPlaintext, nil
 }
 
+// NullPrompt
 const NullPrompt = "/"
 
+// Unlock
 func (s *SecretService) Unlock(items []dbus.ObjectPath) (err error) {
 	var dummy []dbus.ObjectPath
 	var prompt dbus.ObjectPath
@@ -276,6 +307,7 @@ func (s *SecretService) Unlock(items []dbus.ObjectPath) (err error) {
 	return nil
 }
 
+// LockItems
 func (s *SecretService) LockItems(items []dbus.ObjectPath) (err error) {
 	var dummy []dbus.ObjectPath
 	var prompt dbus.ObjectPath
@@ -292,10 +324,12 @@ func (s *SecretService) LockItems(items []dbus.ObjectPath) (err error) {
 	return nil
 }
 
+// PromptDismissedError
 type PromptDismissedError struct {
 	err error
 }
 
+// Error
 func (p PromptDismissedError) Error() string {
 	return p.err.Error()
 }
@@ -336,6 +370,7 @@ func (s *SecretService) PromptAndWait(prompt dbus.ObjectPath) (paths *dbus.Varia
 	}
 }
 
+// NewSecretProperties
 func NewSecretProperties(label string, attributes map[string]string) map[string]dbus.Variant {
 	return map[string]dbus.Variant{
 		"org.freedesktop.Secret.Item.Label":      dbus.MakeVariant(label),
@@ -343,6 +378,7 @@ func NewSecretProperties(label string, attributes map[string]string) map[string]
 	}
 }
 
+// NewSecret
 func (session *Session) NewSecret(secretBytes []byte) (Secret, error) {
 	switch session.Mode {
 	case AuthenticationInsecurePlain:
