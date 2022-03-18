@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"time"
 
-	dbus "github.com/keybase/go.dbus"
+	"github.com/godbus/dbus"
 	errors "github.com/pkg/errors"
 )
 
@@ -82,12 +82,12 @@ func (s *SecretService) SetSessionOpenTimeout(d time.Duration) {
 }
 
 // ServiceObj
-func (s *SecretService) ServiceObj() *dbus.Object {
+func (s *SecretService) ServiceObj() dbus.BusObject {
 	return s.conn.Object(SecretServiceInterface, SecretServiceObjectPath)
 }
 
 // Obj
-func (s *SecretService) Obj(path dbus.ObjectPath) *dbus.Object {
+func (s *SecretService) Obj(path dbus.ObjectPath) dbus.BusObject {
 	return s.conn.Object(SecretServiceInterface, path)
 }
 
