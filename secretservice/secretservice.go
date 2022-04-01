@@ -26,6 +26,9 @@ const AuthenticationInsecurePlain AuthenticationMode = "plain"
 // AuthenticationDHAES
 const AuthenticationDHAES AuthenticationMode = "dh-ietf1024-sha256-aes128-cbc-pkcs7"
 
+// ErrPromptTimedOut
+var ErrPromptTimedOut = errors.New("prompt timed out")
+
 // NilFlags
 const NilFlags = 0
 
@@ -365,7 +368,7 @@ func (s *SecretService) PromptAndWait(prompt dbus.ObjectPath) (paths *dbus.Varia
 			}
 			return &result.Paths, nil
 		case <-time.After(30 * time.Second):
-			return nil, errors.New("prompt timed out")
+			return nil, ErrPromptTimedOut
 		}
 	}
 }
