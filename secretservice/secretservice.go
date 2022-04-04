@@ -76,6 +76,18 @@ func NewService() (*SecretService, error) {
 	}
 	signalCh := make(chan *dbus.Signal, 16)
 	conn.Signal(signalCh)
+
+	// It is necessary to add signal match for broadcast secret prompt
+	// signals (without destination) to be received by session. Otherwise
+	// some secret service providers will not work properly e.g. KeepassXC.
+	o, ok := conn.BusObject().(*dbus.Object)
+	if !ok {
+		return nil, errors.New("bus object type not supported")
+	}
+	if err := o.AddMatchSignal("org.freedesktop.Secret.Prompt", "Completed").Store(); err != nil {
+		return nil, errors.Wrap(err, "add signal match failed")
+	}
+
 	return &SecretService{conn: conn, signalCh: signalCh, sessionOpenTimeout: DefaultSessionOpenTimeout}, nil
 }
 
@@ -223,9 +235,15 @@ func (s *SecretService) CreateItem(collection dbus.ObjectPath, properties map[st
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create item")
 	}
-	_, err = s.PromptAndWait(prompt)
+	vPath, err := s.PromptAndWait(prompt)
 	if err != nil {
 		return "", err
+	}
+	if vPath != nil {
+		path, ok := vPath.Value().(dbus.ObjectPath)
+		if ok && path != NullPrompt {
+			return path, nil
+		}
 	}
 	return item, nil
 }
