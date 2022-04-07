@@ -103,6 +103,8 @@ if err == keychain.ErrorDuplicateItem {
   // Duplicate
 }
 
+password, err := keychain.GetGenericPassword("MyService", "gabriel", "A label", "A123456789.group.com.mycorp")
+
 accounts, err := keychain.GetGenericPasswordAccounts("MyService")
 // Should have 1 account == "gabriel"
 
