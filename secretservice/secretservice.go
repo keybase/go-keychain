@@ -73,6 +73,7 @@ func NewService() (*SecretService, error) {
 	}
 	signalCh := make(chan *dbus.Signal, 16)
 	conn.Signal(signalCh)
+	_ = conn.AddMatchSignal(dbus.WithMatchOption("org.freedesktop.Secret.Prompt", "Completed"))
 	return &SecretService{conn: conn, signalCh: signalCh, sessionOpenTimeout: DefaultSessionOpenTimeout}, nil
 }
 
