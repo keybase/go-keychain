@@ -10,7 +10,7 @@ package secretservice
 import (
 	"testing"
 
-	dbus "github.com/keybase/go.dbus"
+	dbus "github.com/keybase/dbus"
 	"github.com/stretchr/testify/require"
 )
 
