@@ -67,7 +67,7 @@ const DefaultSessionOpenTimeout = 10 * time.Second
 
 // NewService
 func NewService() (*SecretService, error) {
-	conn, err := dbus.SessionBus()
+	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open dbus connection")
 	}
@@ -82,12 +82,12 @@ func (s *SecretService) SetSessionOpenTimeout(d time.Duration) {
 }
 
 // ServiceObj
-func (s *SecretService) ServiceObj() *dbus.Object {
+func (s *SecretService) ServiceObj() dbus.BusObject {
 	return s.conn.Object(SecretServiceInterface, SecretServiceObjectPath)
 }
 
 // Obj
-func (s *SecretService) Obj(path dbus.ObjectPath) *dbus.Object {
+func (s *SecretService) Obj(path dbus.ObjectPath) dbus.BusObject {
 	return s.conn.Object(SecretServiceInterface, path)
 }
 
