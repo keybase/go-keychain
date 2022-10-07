@@ -5,7 +5,7 @@ os:
     - linux
 
 before_install:
-  - go get golang.org/x/lint/golint
+  - go install golang.org/x/lint/golint
 
 script:
   - go vet ./...
