@@ -109,7 +109,7 @@ accounts, err := keychain.GetGenericPasswordAccounts("MyService")
 // Should have 1 account == "gabriel"
 
 err := keychain.DeleteGenericPasswordItem("MyService", "gabriel")
-if err == keychain.ErrorNotFound {
+if err == keychain.ErrorItemNotFound {
   // Not found
 }
 ```
