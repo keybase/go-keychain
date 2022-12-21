@@ -65,6 +65,8 @@ var (
 	ErrorDataNotModifiable = Error(C.errSecDataNotModifiable)
 	// ErrorInvalidOwnerEdit corresponds to errSecInvalidOwnerEdit result code
 	ErrorInvalidOwnerEdit = Error(C.errSecInvalidOwnerEdit)
+	// ErrorUserCanceled corresponds to errSecUserCanceled result code
+	ErrorUserCanceled = Error(C.errSecUserCanceled)
 )
 
 func checkError(errCode C.OSStatus) error {
@@ -120,6 +122,8 @@ func (k Error) Error() (msg string) {
 		msg = "The data is not modifiable."
 	case ErrorInvalidOwnerEdit:
 		msg = "An invalid attempt to change the owner of an item."
+	case ErrorUserCanceled:
+		msg = "User canceled the operation."
 	default:
 		msg = "Keychain Error."
 	}
