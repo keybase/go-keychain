@@ -163,6 +163,8 @@ var (
 	AccountKey = attrKey(C.CFTypeRef(C.kSecAttrAccount))
 	// AccessGroupKey is for kSecAttrAccessGroup
 	AccessGroupKey = attrKey(C.CFTypeRef(C.kSecAttrAccessGroup))
+	// AccessControlKey is for kSecAttrAccessControl
+	AccessControlKey = attrKey(C.CFTypeRef(C.kSecAttrAccessControl))
 	// DataKey is for kSecValueData
 	DataKey = attrKey(C.CFTypeRef(C.kSecValueData))
 	// DescriptionKey is for kSecAttrDescription
@@ -217,16 +219,18 @@ const (
 	AccessibleAccessibleAlwaysThisDeviceOnly = 7
 )
 
-const (
-	AccessControlFlagsUserPresence = 1
-	AccessControlFlagsBiometryAny             = 2
-	AccessControlFlagsBiometryCurrentSet      = 8
-	AccessControlFlagsDevicePasscode          = 16
-	AccessControlFlagsWatch                   = 32
-	AccessControlFlagsOr                      = 16384
-	AccessControlFlagsAnd                     = 32768
-	AccessControlFlagsPrivateKeyUsage         = 1073741824
-	AccessControlFlagsApplicationPassword     = 2147483648
+type AccessControlFlags C.SecAccessControlCreateFlags
+
+var (
+	AccessControlFlagsUserPresence        C.SecAccessControlCreateFlags = 1
+	AccessControlFlagsBiometryAny                                       = 2
+	AccessControlFlagsBiometryCurrentSet                                = 8
+	AccessControlFlagsDevicePasscode                                    = 16
+	AccessControlFlagsWatch                                             = 32
+	AccessControlFlagsOr                                                = 16384
+	AccessControlFlagsAnd                                               = 32768
+	AccessControlFlagsPrivateKeyUsage                                   = 1073741824
+	AccessControlFlagsApplicationPassword                               = 2147483648
 )
 
 // MatchLimit is whether to limit results on query
@@ -309,6 +313,18 @@ func (k *Item) SetData(b []byte) {
 // SetAccessGroup sets the access group attribute
 func (k *Item) SetAccessGroup(ag string) {
 	k.SetString(AccessGroupKey, ag)
+}
+
+func (k *Item) SetAccessControlFlags(accessibility Accessible, flags C.CFOptionFlags) error {
+	cfAccessibility := accessibleTypeRef[accessibility]
+	var err *C.CFErrorRef
+	var allocator C.CFAllocatorRef = 0 // null
+	ac := C.SecAccessControlCreateWithFlags(allocator, cfAccessibility, flags, err)
+	if err != nil {
+		return fmt.Errorf("failed to create access control: %+v", err)
+	}
+	k.attr[AccessControlKey] = ac
+	return nil
 }
 
 // SetSynchronizable sets the synchronizable attribute
