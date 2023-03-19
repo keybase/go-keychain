@@ -217,6 +217,18 @@ const (
 	AccessibleAccessibleAlwaysThisDeviceOnly = 7
 )
 
+const (
+	AccessControlFlagsUserPresence = 1
+	AccessControlFlagsBiometryAny             = 2
+	AccessControlFlagsBiometryCurrentSet      = 8
+	AccessControlFlagsDevicePasscode          = 16
+	AccessControlFlagsWatch                   = 32
+	AccessControlFlagsOr                      = 16384
+	AccessControlFlagsAnd                     = 32768
+	AccessControlFlagsPrivateKeyUsage         = 1073741824
+	AccessControlFlagsApplicationPassword     = 2147483648
+)
+
 // MatchLimit is whether to limit results on query
 type MatchLimit int
 
