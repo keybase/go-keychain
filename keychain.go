@@ -270,7 +270,7 @@ func (k *Item) SetSecClass(sc SecClass) {
 	k.attr[SecClassKey] = secClassTypeRef[sc]
 }
 
-// SetInt32 sets an int32 attibute for a string key
+// SetInt32 sets an int32 attribute for a string key
 func (k *Item) SetInt32(key string, v int32) {
 	if v != 0 {
 		k.attr[key] = v
