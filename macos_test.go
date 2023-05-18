@@ -4,7 +4,6 @@
 package keychain
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -86,18 +85,60 @@ func TestGenericPasswordRef(t *testing.T) {
 }
 
 func TestInternetPassword(t *testing.T) {
+	item := NewItem()
+	item.SetSecClass(SecClassInternetPassword)
+
+	// Internet password-specific attributes
+	item.SetProtocol("htps")
+	item.SetServer("8xs8h5x5dfc0AI5EzT81l.com")
+	item.SetPort(1234)
+	item.SetPath("/this/is/the/path")
+
+	item.SetAccount("this-is-the-username")
+	item.SetLabel("this is the label")
+	item.SetData([]byte("this is the password"))
+	item.SetComment("this is the comment")
+	defer func() { _ = DeleteItem(item) }()
+	err := AddItem(item)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	query := NewItem()
 	query.SetSecClass(SecClassInternetPassword)
-	query.SetLabel("github.com")
+	query.SetServer("8xs8h5x5dfc0AI5EzT81l.com")
 	query.SetMatchLimit(MatchLimitOne)
 	query.SetReturnAttributes(true)
 	results, err := QueryItem(query)
 	if err != nil {
-		// Error
-		t.Errorf("Query Error: %v", err)
-	} else {
-		for _, r := range results {
-			fmt.Printf("%#v\n", r.Account)
-		}
+		t.Fatalf("Query Error: %v", err)
+	}
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+
+	r := results[0]
+	if r.Protocol != "htps" {
+		t.Errorf("expected protocol 'htps' but got %q", r.Protocol)
+	}
+	if r.Server != "8xs8h5x5dfc0AI5EzT81l.com" {
+		t.Errorf("expected server '8xs8h5x5dfc0AI5EzT81l.com' but got %q", r.Server)
+	}
+	if r.Port != 1234 {
+		t.Errorf("expected port '1234' but got %d", r.Port)
+	}
+	if r.Path != "/this/is/the/path" {
+		t.Errorf("expected path '/this/is/the/path' but got %q", r.Path)
+	}
+
+	if r.Account != "this-is-the-username" {
+		t.Errorf("expected account 'this-is-the-username' but got %q", r.Account)
+	}
+	if r.Label != "this is the label" {
+		t.Errorf("expected label 'this is the label' but got %q", r.Label)
+	}
+	if r.Comment != "this is the comment" {
+		t.Errorf("expected comment 'this is the comment' but got %q", r.Comment)
 	}
 }
