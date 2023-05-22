@@ -23,9 +23,3 @@ var accessibleTypeRef = map[Accessible]C.CFTypeRef{
 	// Only available in 10.10
 	//AccessibleWhenPasscodeSetThisDeviceOnly:  C.CFTypeRef(C.kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly),
 }
-
-// DeleteItemRef deletes a keychain item reference.
-func DeleteItemRef(ref C.CFTypeRef) error {
-	errCode := C.SecKeychainItemDelete(C.SecKeychainItemRef(ref))
-	return checkError(errCode)
-}
