@@ -68,7 +68,7 @@ func TestGenericPasswordRef(t *testing.T) {
 	} else if ref == 0 {
 		t.Fatal("Missing result")
 	} else {
-		err = DeleteItemRef(ref)
+		err = DeleteItem(item)
 		if err != nil {
 			t.Fatal(err)
 		}
