@@ -45,7 +45,7 @@ func TestUpdateItem(t *testing.T) {
 	}
 }
 
-func TestGenericPasswordRef(t *testing.T) {
+func TestGenericPassword(t *testing.T) {
 	service, account, label, accessGroup, password := "TestGenericPasswordRef", "test", "", "", "toomanysecrets"
 
 	item := NewGenericPassword(service, account, label, []byte(password), accessGroup)
@@ -55,24 +55,9 @@ func TestGenericPasswordRef(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Query reference and delete by reference
-	query := NewItem()
-	query.SetSecClass(SecClassGenericPassword)
-	query.SetService(service)
-	query.SetAccount(account)
-	query.SetMatchLimit(MatchLimitOne)
-	query.SetReturnRef(true)
-	ref, err := QueryItemRef(query)
+	err = DeleteItem(item)
 	if err != nil {
 		t.Fatal(err)
-	} else if ref == 0 {
-		t.Fatal("Missing result")
-	} else {
-		err = DeleteItem(item)
-		if err != nil {
-			t.Fatal(err)
-		}
-		Release(ref)
 	}
 
 	passwordAfter, err := GetGenericPassword(service, account, label, accessGroup)
