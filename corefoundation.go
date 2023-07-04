@@ -101,6 +101,13 @@ func CFDictionaryToMap(cfDict C.CFDictionaryRef) (m map[C.CFTypeRef]C.CFTypeRef)
 	return
 }
 
+// Int32ToCFNumber will return a CFNumberRef, must be released with Release(ref).
+func Int32ToCFNumber(u int32) C.CFNumberRef {
+	sint := C.SInt32(u)
+	p := unsafe.Pointer(&sint)
+	return C.CFNumberCreate(C.kCFAllocatorDefault, C.kCFNumberSInt32Type, p)
+}
+
 // StringToCFString will return a CFStringRef and if non-nil, must be released with
 // Release(ref).
 func StringToCFString(s string) (C.CFStringRef, error) {
@@ -186,6 +193,9 @@ func ConvertMapToCFDictionary(attr map[string]interface{}) (C.CFDictionaryRef, e
 			} else {
 				valueRef = C.CFTypeRef(C.kCFBooleanFalse)
 			}
+		case int32:
+			valueRef = C.CFTypeRef(Int32ToCFNumber(val))
+			defer Release(valueRef)
 		case []byte:
 			bytesRef, err := BytesToCFData(val)
 			if err != nil {

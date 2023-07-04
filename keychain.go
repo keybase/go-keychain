@@ -157,6 +157,18 @@ var secClassTypeRef = map[SecClass]C.CFTypeRef{
 var (
 	// ServiceKey is for kSecAttrService
 	ServiceKey = attrKey(C.CFTypeRef(C.kSecAttrService))
+
+	// ServerKey is for kSecAttrServer
+	ServerKey = attrKey(C.CFTypeRef(C.kSecAttrServer))
+	// ProtocolKey is for kSecAttrProtocol
+	ProtocolKey = attrKey(C.CFTypeRef(C.kSecAttrProtocol))
+	// AuthenticationTypeKey is for kSecAttrAuthenticationType
+	AuthenticationTypeKey = attrKey(C.CFTypeRef(C.kSecAttrAuthenticationType))
+	// PortKey is for kSecAttrPort
+	PortKey = attrKey(C.CFTypeRef(C.kSecAttrPort))
+	// PathKey is for kSecAttrPath
+	PathKey = attrKey(C.CFTypeRef(C.kSecAttrPath))
+
 	// LabelKey is for kSecAttrLabel
 	LabelKey = attrKey(C.CFTypeRef(C.kSecAttrLabel))
 	// AccountKey is for kSecAttrAccount
@@ -169,6 +181,8 @@ var (
 	DataKey = attrKey(C.CFTypeRef(C.kSecValueData))
 	// DescriptionKey is for kSecAttrDescription
 	DescriptionKey = attrKey(C.CFTypeRef(C.kSecAttrDescription))
+	// CommentKey is for kSecAttrComment
+	CommentKey = attrKey(C.CFTypeRef(C.kSecAttrComment))
 	// CreationDateKey is for kSecAttrCreationDate
 	CreationDateKey = attrKey(C.CFTypeRef(C.kSecAttrCreationDate))
 	// ModificationDateKey is for kSecAttrModificationDate
@@ -272,6 +286,15 @@ func (k *Item) SetSecClass(sc SecClass) {
 	k.attr[SecClassKey] = secClassTypeRef[sc]
 }
 
+// SetInt32 sets an int32 attribute for a string key
+func (k *Item) SetInt32(key string, v int32) {
+	if v != 0 {
+		k.attr[key] = v
+	} else {
+		delete(k.attr, key)
+	}
+}
+
 // SetString sets a string attibute for a string key
 func (k *Item) SetString(key string, s string) {
 	if s != "" {
@@ -281,9 +304,35 @@ func (k *Item) SetString(key string, s string) {
 	}
 }
 
-// SetService sets the service attribute
+// SetService sets the service attribute (for generic application items)
 func (k *Item) SetService(s string) {
 	k.SetString(ServiceKey, s)
+}
+
+// SetServer sets the server attribute (for internet password items)
+func (k *Item) SetServer(s string) {
+	k.SetString(ServerKey, s)
+}
+
+// SetProtocol sets the protocol attribute (for internet password items)
+// Example values are: "htps", "http", "smb "
+func (k *Item) SetProtocol(s string) {
+	k.SetString(ProtocolKey, s)
+}
+
+// SetAuthenticationType sets the authentication type attribute (for internet password items)
+func (k *Item) SetAuthenticationType(s string) {
+	k.SetString(AuthenticationTypeKey, s)
+}
+
+// SetPort sets the port attribute (for internet password items)
+func (k *Item) SetPort(v int32) {
+	k.SetInt32(PortKey, v)
+}
+
+// SetPath sets the path attribute (for internet password items)
+func (k *Item) SetPath(s string) {
+	k.SetString(PathKey, s)
 }
 
 // SetAccount sets the account attribute
@@ -299,6 +348,11 @@ func (k *Item) SetLabel(l string) {
 // SetDescription sets the description attribute
 func (k *Item) SetDescription(s string) {
 	k.SetString(DescriptionKey, s)
+}
+
+// SetComment sets the comment attribute
+func (k *Item) SetComment(s string) {
+	k.SetString(CommentKey, s)
 }
 
 // SetData sets the data attribute
@@ -419,11 +473,21 @@ func UpdateItem(queryItem Item, updateItem Item) error {
 // QueryResult stores all possible results from queries.
 // Not all fields are applicable all the time. Results depend on query.
 type QueryResult struct {
-	Service          string
+	// For generic application items
+	Service string
+
+	// For internet password items
+	Server             string
+	Protocol           string
+	AuthenticationType string
+	Port               int32
+	Path               string
+
 	Account          string
 	AccessGroup      string
 	Label            string
 	Description      string
+	Comment          string
 	Data             []byte
 	CreationDate     time.Time
 	ModificationDate time.Time
@@ -508,6 +572,17 @@ func convertResult(d C.CFDictionaryRef) (*QueryResult, error) {
 		switch attrKey(k) {
 		case ServiceKey:
 			result.Service = CFStringToString(C.CFStringRef(v))
+		case ServerKey:
+			result.Server = CFStringToString(C.CFStringRef(v))
+		case ProtocolKey:
+			result.Protocol = CFStringToString(C.CFStringRef(v))
+		case AuthenticationTypeKey:
+			result.AuthenticationType = CFStringToString(C.CFStringRef(v))
+		case PortKey:
+			val := CFNumberToInterface(C.CFNumberRef(v))
+			result.Port = val.(int32)
+		case PathKey:
+			result.Path = CFStringToString(C.CFStringRef(v))
 		case AccountKey:
 			result.Account = CFStringToString(C.CFStringRef(v))
 		case AccessGroupKey:
@@ -516,6 +591,8 @@ func convertResult(d C.CFDictionaryRef) (*QueryResult, error) {
 			result.Label = CFStringToString(C.CFStringRef(v))
 		case DescriptionKey:
 			result.Description = CFStringToString(C.CFStringRef(v))
+		case CommentKey:
+			result.Comment = CFStringToString(C.CFStringRef(v))
 		case DataKey:
 			b, err := CFDataToBytes(C.CFDataRef(v))
 			if err != nil {
