@@ -23,8 +23,14 @@ CFDictionaryRef CFDictionaryCreateSafe2(CFAllocatorRef allocator, const uintptr_
   return CFDictionaryCreate(allocator, (const void **)keys, (const void **)values, numValues, keyCallBacks, valueCallBacks);
 }
 
+// See: https://developer.apple.com/documentation/corefoundation/1388741-cfarraycreate
 CFArrayRef CFArrayCreateSafe2(CFAllocatorRef allocator, const uintptr_t *values, CFIndex numValues, const CFArrayCallBacks *callBacks) {
   return CFArrayCreate(allocator, (const void **)values, numValues, callBacks);
+}
+
+// See: https://developer.apple.com/documentation/corefoundation/1388770-cfarraycreatemutable
+CFMutableArrayRef CFArrayCreateMutableSafe2(CFAllocatorRef allocator, CFIndex numValues, const CFArrayCallBacks *callBacks) {
+  return CFArrayCreateMutable(allocator, numValues, callBacks);
 }
 */
 import "C"
@@ -42,6 +48,11 @@ func Release(ref C.CFTypeRef) {
 	C.CFRelease(ref)
 }
 
+// Retain retains memory pointed to by a CFTypeRef.
+func Retain(ref C.CFTypeRef) {
+	C.CFRetain(ref)
+}
+
 // BytesToCFData will return a CFDataRef and if non-nil, must be released with
 // Release(ref).
 func BytesToCFData(b []byte) (C.CFDataRef, error) {
@@ -52,6 +63,8 @@ func BytesToCFData(b []byte) (C.CFDataRef, error) {
 	if len(b) > 0 {
 		p = (*C.UInt8)(&b[0])
 	}
+
+	// https://developer.apple.com/documentation/corefoundation/1542359-cfdatacreate
 	cfData := C.CFDataCreate(C.kCFAllocatorDefault, p, C.CFIndex(len(b)))
 	if cfData == 0 {
 		return 0, fmt.Errorf("CFDataCreate failed")
@@ -144,6 +157,17 @@ func CFStringToString(s C.CFStringRef) string {
 	var usedBufLen C.CFIndex
 	_ = C.CFStringGetBytes(s, C.CFRange{0, length}, C.kCFStringEncodingUTF8, C.UInt8(0), C.false, (*C.UInt8)(&buf[0]), maxBufLen, &usedBufLen)
 	return string(buf[:usedBufLen])
+}
+
+// CFBooleanToBool convers a C.CFBooleanRef to a golang bool
+func CFBooleanToBool(b C.CFBooleanRef) bool {
+	return C.CFBooleanGetValue(b) != 0
+}
+
+func CFKeyTypeEnumToString(cfNumber C.CFNumberRef) string {
+	var value C.int
+	C.CFNumberGetValue(cfNumber, C.kCFNumberIntType, unsafe.Pointer(&value))
+	return fmt.Sprintf("%d", value)
 }
 
 // ArrayToCFArray will return a CFArrayRef and if non-nil, must be released with
@@ -367,4 +391,24 @@ func CFNumberToInterface(cfNumber C.CFNumberRef) interface{} {
 		return int(nsInt)
 	}
 	panic("Unknown CFNumber type")
+}
+
+// CFErrorError returns an error for a CFErrorRef unless it is nil.
+func CFErrorError(cfErr C.CFErrorRef) error {
+	var err C.CFErrorRef
+	if cfErr == err {
+		return nil
+	}
+	code := int(C.CFErrorGetCode(cfErr))
+	cDescription := C.CFErrorCopyDescription(cfErr)
+	defer Release(C.CFTypeRef(cDescription))
+	return fmt.Errorf("CFError %d (%s)", code, CFStringToString(cDescription))
+}
+
+// newEmptyArray returns an empty array created by CFArrayCreate.
+// See: https://developer.apple.com/documentation/corefoundation/1388741-cfarraycreate
+func newEmptyArray(capacity int) C.CFMutableArrayRef {
+	arrayRef := C.CFArrayCreateMutableSafe2(C.kCFAllocatorDefault, C.CFIndex(capacity), &C.kCFTypeArrayCallBacks) //nolint
+
+	return arrayRef
 }

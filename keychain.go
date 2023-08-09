@@ -15,8 +15,14 @@ package keychain
 */
 import "C"
 import (
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/rsa"
 	"fmt"
+	"log"
+	"runtime"
 	"time"
+	"unsafe"
 )
 
 // Error defines keychain errors
@@ -145,6 +151,9 @@ var (
 	*/
 	SecClassGenericPassword  SecClass = 1
 	SecClassInternetPassword SecClass = 2
+	SecClassCertificate      SecClass = 3
+	SecClassIdentity         SecClass = 4
+	SecClassCryptoKey        SecClass = 5
 )
 
 // SecClassKey is the key type for SecClass
@@ -152,9 +161,86 @@ var SecClassKey = attrKey(C.CFTypeRef(C.kSecClass))
 var secClassTypeRef = map[SecClass]C.CFTypeRef{
 	SecClassGenericPassword:  C.CFTypeRef(C.kSecClassGenericPassword),
 	SecClassInternetPassword: C.CFTypeRef(C.kSecClassInternetPassword),
+	SecClassIdentity:         C.CFTypeRef(C.kSecClassIdentity),
+}
+
+var SecKeyTypeKey = attrKey(C.CFTypeRef(C.kSecAttrKeyType))
+
+var (
+	KeyTypeRSA              = CFStringToString(C.kSecAttrKeyTypeRSA)
+	KeyTypeDSA              = CFStringToString(C.kSecAttrKeyTypeDSA)
+	KeyTypeAES              = CFStringToString(C.kSecAttrKeyTypeAES)
+	KeyTypeDES              = CFStringToString(C.kSecAttrKeyTypeDES)
+	KeyType3DES             = CFStringToString(C.kSecAttrKeyType3DES)
+	KeyTypeRC4              = CFStringToString(C.kSecAttrKeyTypeRC4)
+	KeyTypeRC2              = CFStringToString(C.kSecAttrKeyTypeRC2)
+	KeyTypeCAST             = CFStringToString(C.kSecAttrKeyTypeCAST)
+	KeyTypeECDSA            = CFStringToString(C.kSecAttrKeyTypeECDSA)
+	KeyTypeECSECPrimeRandom = CFStringToString(C.kSecAttrKeyTypeECSECPrimeRandom)
+	// Add other key types as needed
+)
+
+var keyTypeEnumToString = map[string]string{
+	KeyTypeRSA:              "RSA",
+	KeyTypeDSA:              "DSA",
+	KeyTypeAES:              "AES",
+	KeyTypeDES:              "DES",
+	KeyType3DES:             "3DES",
+	KeyTypeRC4:              "RC4",
+	KeyTypeRC2:              "RC2",
+	KeyTypeCAST:             "CAST",
+	KeyTypeECDSA:            "ECDSA",
+	KeyTypeECSECPrimeRandom: "ECSECPrimeRandom",
+	// Add other key types as needed
+}
+
+// SecKeyAlgorithm is a type representing the key algorithms.
+type SecKeyAlgorithm string
+
+const (
+	// RSA algorithms
+	RSAEncryptionPKCS1               SecKeyAlgorithm = "rsaEncryptionPKCS1"
+	RSASignatureDigestPKCS1v15SHA1   SecKeyAlgorithm = "rsaSignatureDigestPKCS1v15SHA1"
+	RSASignatureDigestPKCS1v15SHA256 SecKeyAlgorithm = "rsaSignatureDigestPKCS1v15SHA256"
+	RSASignatureDigestPKCS1v15SHA384 SecKeyAlgorithm = "rsaSignatureDigestPKCS1v15SHA384"
+	RSASignatureDigestPKCS1v15SHA512 SecKeyAlgorithm = "rsaSignatureDigestPKCS1v15SHA512"
+	RSASignatureDigestPSSSHA256      SecKeyAlgorithm = "rsaSignatureDigestPSSSHA256"
+	RSASignatureDigestPSSSHA384      SecKeyAlgorithm = "rsaSignatureDigestPSSSHA384"
+	RSASignatureDigestPSSSHA512      SecKeyAlgorithm = "rsaSignatureDigestPSSSHA512"
+	// ECDSA algorithms
+	ECDSASignatureDigestX962SHA1   SecKeyAlgorithm = "ecdsaSignatureDigestX962SHA1"
+	ECDSASignatureDigestX962SHA256 SecKeyAlgorithm = "ecdsaSignatureDigestX962SHA256"
+	ECDSASignatureDigestX962SHA384 SecKeyAlgorithm = "ecdsaSignatureDigestX962SHA384"
+	ECDSASignatureDigestX962SHA512 SecKeyAlgorithm = "ecdsaSignatureDigestX962SHA512"
+	// ... add other constants as needed
+)
+
+var secKeyAlgorithmMap = map[SecKeyAlgorithm]C.SecKeyAlgorithm{
+	// RSA algorithms
+	RSAEncryptionPKCS1:               C.kSecKeyAlgorithmRSAEncryptionPKCS1,
+	RSASignatureDigestPKCS1v15SHA1:   C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA1,
+	RSASignatureDigestPKCS1v15SHA256: C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA256,
+	RSASignatureDigestPKCS1v15SHA384: C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA384,
+	RSASignatureDigestPKCS1v15SHA512: C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA512,
+	RSASignatureDigestPSSSHA256:      C.kSecKeyAlgorithmRSASignatureDigestPSSSHA256,
+	RSASignatureDigestPSSSHA384:      C.kSecKeyAlgorithmRSASignatureDigestPSSSHA384,
+	RSASignatureDigestPSSSHA512:      C.kSecKeyAlgorithmRSASignatureDigestPSSSHA512,
+	// ECDSA algorithms
+	ECDSASignatureDigestX962SHA1:   C.kSecKeyAlgorithmECDSASignatureDigestX962SHA1,
+	ECDSASignatureDigestX962SHA256: C.kSecKeyAlgorithmECDSASignatureDigestX962SHA256,
+	ECDSASignatureDigestX962SHA384: C.kSecKeyAlgorithmECDSASignatureDigestX962SHA384,
+	ECDSASignatureDigestX962SHA512: C.kSecKeyAlgorithmECDSASignatureDigestX962SHA512,
+	// ... add other mappings as needed
 }
 
 var (
+	// PersistentRefKey is for kSecValuePersistentRef
+	PersistentRefKey = attrKey(C.CFTypeRef(C.kSecValuePersistentRef))
+	// RefKey is for kSecValueRef
+	RefKey = attrKey(C.CFTypeRef(C.kSecValueRef))
+	// ValueRef is for kSecValueRef
+	ValueRef = attrKey(C.CFTypeRef(C.kSecValueRef))
+
 	// ServiceKey is for kSecAttrService
 	ServiceKey = attrKey(C.CFTypeRef(C.kSecAttrService))
 
@@ -185,6 +271,12 @@ var (
 	CreationDateKey = attrKey(C.CFTypeRef(C.kSecAttrCreationDate))
 	// ModificationDateKey is for kSecAttrModificationDate
 	ModificationDateKey = attrKey(C.CFTypeRef(C.kSecAttrModificationDate))
+
+	TokenIDKey = attrKey(C.CFTypeRef(C.kSecAttrTokenID))
+	// KeySizeInBitsKey is for kSecAttrKeySizeInBits
+	KeySizeInBitsKey = attrKey(C.CFTypeRef(C.kSecAttrKeySizeInBits))
+	// PrivateKeyAttrsKey is for kSecPrivateKeyAttrs
+	PrivateKeyAttrsKey = attrKey(C.CFTypeRef(C.kSecPrivateKeyAttrs))
 )
 
 // Synchronizable is the items synchronizable status
@@ -259,15 +351,25 @@ var ReturnDataKey = attrKey(C.CFTypeRef(C.kSecReturnData))
 // ReturnRefKey is key type for kSecReturnRef
 var ReturnRefKey = attrKey(C.CFTypeRef(C.kSecReturnRef))
 
+// ReturnPersistentRefKey is the key type for kSecReturnPersistentRef
+var ReturnPersistentRefKey = attrKey(C.CFTypeRef(C.kSecReturnPersistentRef))
+
 // Item for adding, querying or deleting.
 type Item struct {
 	// Values can be string, []byte, Convertable or CFTypeRef (constant).
-	attr map[string]interface{}
+	attr     map[string]interface{}
+	secClass SecClass
 }
 
 // SetSecClass sets the security class
 func (k *Item) SetSecClass(sc SecClass) {
 	k.attr[SecClassKey] = secClassTypeRef[sc]
+	k.secClass = sc
+}
+
+// SetValueRef sets a CFTypeRef as a value
+func (k *Item) SetValueRef(secRef C.CFTypeRef) {
+	k.attr[ValueRef] = secRef
 }
 
 // SetInt32 sets an int32 attribute for a string key
@@ -279,7 +381,7 @@ func (k *Item) SetInt32(key string, v int32) {
 	}
 }
 
-// SetString sets a string attibute for a string key
+// SetString sets a string attribute for a string key
 func (k *Item) SetString(key string, s string) {
 	if s != "" {
 		k.attr[key] = s
@@ -381,23 +483,46 @@ func (k *Item) SetMatchLimit(matchLimit MatchLimit) {
 }
 
 // SetReturnAttributes sets the return value type on query
+// See: https://developer.apple.com/documentation/security/keychain_services/keychain_items/item_return_result_keys
+// and https://developer.apple.com/documentation/security/ksecreturnattributes
 func (k *Item) SetReturnAttributes(b bool) {
 	k.attr[ReturnAttributesKey] = b
 }
 
 // SetReturnData enables returning data on query
+// See: https://developer.apple.com/documentation/security/keychain_services/keychain_items/item_return_result_keys
+// and https://developer.apple.com/documentation/security/ksecreturndata
 func (k *Item) SetReturnData(b bool) {
 	k.attr[ReturnDataKey] = b
 }
 
 // SetReturnRef enables returning references on query
+// See: https://developer.apple.com/documentation/security/keychain_services/keychain_items/item_return_result_keys
+// and https://developer.apple.com/documentation/security/ksecvalueref
 func (k *Item) SetReturnRef(b bool) {
 	k.attr[ReturnRefKey] = b
 }
 
+// SetReturnPersistentRef enables returning persistent references on query.
+// See: https://developer.apple.com/documentation/security/keychain_services/keychain_items/item_return_result_keys
+// and  https://developer.apple.com/documentation/security/ksecreturnpersistentref
+func (k *Item) SetReturnPersistentRef(b bool) {
+	k.attr[ReturnPersistentRefKey] = b
+}
+
+// SetPersistentRef sets the PersistentRefKey to the []byte slice representing a specific keychain item
+// See:  https://developer.apple.com/documentation/security/ksecreturnpersistentref
+func (k *Item) SetPersistentRef(b []byte) {
+	if len(b) > 0 {
+		k.attr[PersistentRefKey] = b
+	} else {
+		delete(k.attr, PersistentRefKey)
+	}
+}
+
 // NewItem is a new empty keychain item
 func NewItem() Item {
-	return Item{make(map[string]interface{})}
+	return Item{make(map[string]interface{}), 0}
 }
 
 // NewGenericPassword creates a generic password item with the default keychain. This is a convenience method.
@@ -445,6 +570,12 @@ func UpdateItem(queryItem Item, updateItem Item) error {
 // QueryResult stores all possible results from queries.
 // Not all fields are applicable all the time. Results depend on query.
 type QueryResult struct {
+	// For all keychain items
+	PersistentRef    []byte
+	CreationDate     time.Time
+	ModificationDate time.Time
+	Comment          string
+
 	// For generic application items
 	Service string
 
@@ -455,14 +586,25 @@ type QueryResult struct {
 	Port               int32
 	Path               string
 
-	Account          string
-	AccessGroup      string
-	Label            string
-	Description      string
-	Comment          string
-	Data             []byte
-	CreationDate     time.Time
-	ModificationDate time.Time
+	Account     string
+	AccessGroup string
+	Label       string
+	Description string
+	Data        []byte
+
+	// Certificates
+	Certificate    *CertificateRef
+	HasCertificate bool
+
+	// Identity
+	Identity    *IdentityRef
+	HasIdentity bool
+	TokenID     string
+
+	// Keys
+	Key     *KeyRef
+	HasKey  bool
+	KeyType string
 }
 
 // QueryItemRef returns query result as CFTypeRef. You must release it when you are done.
@@ -486,6 +628,8 @@ func QueryItemRef(item Item) (C.CFTypeRef, error) {
 }
 
 // QueryItem returns a list of query results.
+// See: https://developer.apple.com/documentation/security/keychain_services/keychain_items/item_return_result_keys
+// for the results that can be returned.
 func QueryItem(item Item) ([]QueryResult, error) {
 	resultsRef, err := QueryItemRef(item)
 	if err != nil {
@@ -504,7 +648,7 @@ func QueryItem(item Item) ([]QueryResult, error) {
 		for _, ref := range arr {
 			elementTypeID := C.CFGetTypeID(ref)
 			if elementTypeID == C.CFDictionaryGetTypeID() {
-				item, err := convertResult(C.CFDictionaryRef(ref))
+				item, err := convertResult(C.CFDictionaryRef(ref), item.secClass)
 				if err != nil {
 					return nil, err
 				}
@@ -514,7 +658,7 @@ func QueryItem(item Item) ([]QueryResult, error) {
 			}
 		}
 	} else if typeID == C.CFDictionaryGetTypeID() {
-		item, err := convertResult(C.CFDictionaryRef(resultsRef))
+		item, err := convertResult(C.CFDictionaryRef(resultsRef), item.secClass)
 		if err != nil {
 			return nil, err
 		}
@@ -537,11 +681,12 @@ func attrKey(ref C.CFTypeRef) string {
 	return CFStringToString(C.CFStringRef(ref))
 }
 
-func convertResult(d C.CFDictionaryRef) (*QueryResult, error) {
+func convertResult(d C.CFDictionaryRef, sc SecClass) (*QueryResult, error) {
 	m := CFDictionaryToMap(d)
 	result := QueryResult{}
 	for k, v := range m {
-		switch attrKey(k) {
+		key := attrKey(k)
+		switch key {
 		case ServiceKey:
 			result.Service = CFStringToString(C.CFStringRef(v))
 		case ServerKey:
@@ -571,15 +716,75 @@ func convertResult(d C.CFDictionaryRef) (*QueryResult, error) {
 				return nil, err
 			}
 			result.Data = b
+		case TokenIDKey:
+			result.TokenID = CFStringToString(C.CFStringRef(v))
+		case PersistentRefKey:
+			b, err := CFDataToBytes(C.CFDataRef(v))
+			if err != nil {
+				return nil, err
+			}
+			result.PersistentRef = b
+		case RefKey:
+			switch sc {
+			case SecClassCertificate:
+				result.Certificate = newCertificateRef(v)
+				result.HasCertificate = true
+			case SecClassIdentity:
+				result.Identity = newIdentityRef(v)
+				result.HasIdentity = true
+			case SecClassCryptoKey:
+				result.Key = newKeyRef(v)
+				result.HasKey = true
+				// case SecClassGenericPassword:
+				// case SecClassInternetPassword:
+				// 	log.Println("Ref type for Passwords not supported.")
+				// default:
+				// 	log.Printf("Unhandled SecClass in conversion: %v\n", key)
+			}
 		case CreationDateKey:
 			result.CreationDate = CFDateToTime(C.CFDateRef(v))
 		case ModificationDateKey:
 			result.ModificationDate = CFDateToTime(C.CFDateRef(v))
+		case SecKeyTypeKey:
+			enumStr := CFKeyTypeEnumToString(C.CFNumberRef(v))
+			keyType, ok := keyTypeEnumToString[enumStr]
+			if !ok {
+				return nil, fmt.Errorf("unhandled key type in kSecAttrKeyType: %v", enumStr)
+			} else {
+				result.KeyType = keyType
+			}
 			// default:
-			// fmt.Printf("Unhandled key in conversion: %v = %v\n", cfTypeValue(k), cfTypeValue(v))
+			// 	log.Printf("Unhandled key in conversion: %v\n", key)
 		}
 	}
 	return &result, nil
+}
+
+func newCertificateRef(v C.CFTypeRef) *CertificateRef {
+	Retain(v)
+	cert := &CertificateRef{C.SecCertificateRef(v)}
+	runtime.SetFinalizer(cert, func(certRef *CertificateRef) {
+		Release(C.CFTypeRef(certRef.cCertificateRef))
+	})
+	return cert
+}
+
+func newIdentityRef(v C.CFTypeRef) *IdentityRef {
+	Retain(v)
+	ident := &IdentityRef{C.SecIdentityRef(v)}
+	runtime.SetFinalizer(ident, func(identRef *IdentityRef) {
+		Release(C.CFTypeRef(identRef.cIdentityRef))
+	})
+	return ident
+}
+
+func newKeyRef(v C.CFTypeRef) *KeyRef {
+	Retain(v)
+	key := &KeyRef{C.SecKeyRef(v)}
+	runtime.SetFinalizer(key, func(keyRef *KeyRef) {
+		Release(C.CFTypeRef(keyRef.cKeyRef))
+	})
+	return key
 }
 
 // DeleteGenericPasswordItem removes a generic password item.
@@ -591,7 +796,7 @@ func DeleteGenericPasswordItem(service string, account string) error {
 	return DeleteItem(item)
 }
 
-// DeleteItem removes a Item
+// DeleteItem removes an Item
 func DeleteItem(item Item) error {
 	cfDict, err := ConvertMapToCFDictionary(item.attr)
 	if err != nil {
@@ -603,7 +808,8 @@ func DeleteItem(item Item) error {
 	return checkError(errCode)
 }
 
-// GetAccountsForService is deprecated
+// GetAccountsForService is deprecated.
+// Deprecated: use GetGenericPasswordAccounts instead.
 func GetAccountsForService(service string) ([]string, error) {
 	return GetGenericPasswordAccounts(service)
 }
@@ -637,6 +843,8 @@ func GetGenericPassword(service string, account string, label string, accessGrou
 	query.SetAccount(account)
 	query.SetLabel(label)
 	query.SetAccessGroup(accessGroup)
+	// https://developer.apple.com/documentation/security/1398306-secitemcopymatching
+	// You can't combine the kSecReturnData and kSecMatchLimitAll options when copying password items.
 	query.SetMatchLimit(MatchLimitOne)
 	query.SetReturnData(true)
 	results, err := QueryItem(query)
@@ -650,4 +858,383 @@ func GetGenericPassword(service string, account string, label string, accessGrou
 		return results[0].Data, nil
 	}
 	return nil, nil
+}
+
+// Utility Refs for Certificate, Keys and Identities (which are both a Cert and a Key)
+
+// CertificateRef for interacting with a specific keychain certificate
+type CertificateRef struct {
+	cCertificateRef C.SecCertificateRef
+}
+
+// GetCertificateData returns the certificate as a byte slice.
+// See:https://developer.apple.com/documentation/security/1396080-seccertificatecopydata .
+// The certificate object for which you wish to return the DER (Distinguished Encoding Rules) representation of the X.509 certificate.
+func (c *CertificateRef) GetCertificateData() ([]byte, error) {
+	cfData := C.SecCertificateCopyData(c.cCertificateRef)
+	defer Release(C.CFTypeRef(cfData))
+	return CFDataToBytes(cfData)
+}
+
+type TrustRef struct {
+	cTrustRef C.SecTrustRef
+}
+
+func (c *CertificateRef) createTrustRef() (*TrustRef, error) {
+	// See: https://developer.apple.com/documentation/security/1397202-secpolicycreatebasicx509
+	basicPolicyRef := C.SecPolicyCreateBasicX509()
+
+	var trustRef C.SecTrustRef
+	// https://developer.apple.com/documentation/security/1401555-sectrustcreatewithcertificates
+	//nolint:gocritic//dupSubExpr: suspicious identical LHS and RHS for `==` operator.
+	errCode := C.SecTrustCreateWithCertificates(C.CFTypeRef(c.cCertificateRef), C.CFTypeRef(basicPolicyRef), &trustRef)
+	err := checkError(errCode)
+	if err != nil {
+		return nil, fmt.Errorf("could not create SecTrust object for certificate: %w", err)
+	}
+
+	trust := &TrustRef{trustRef}
+	runtime.SetFinalizer(trust, func(trustRef *TrustRef) {
+		Release(C.CFTypeRef(trustRef.cTrustRef))
+	})
+
+	return trust, nil
+}
+
+// GetCertChainData returns a [][]byte containing the bytes of the certificate chain for the given cert.
+// See: https://developer.apple.com/documentation/security/1396080-seccertificatecopydata  and https://developer.apple.com/documentation/security/3747134-sectrustcopycertificatechain
+// The certificate object for which you wish to return the DER (Distinguished Encoding Rules) representation of the X.509 certificate.
+func (c *CertificateRef) GetCertChainData() ([][]byte, error) {
+	return c.getCertChainData(nil)
+}
+
+// GetCertChainDataWithAnchor returns a [][]byte containing the bytes of the certificate chain for the given cert.
+// See: https://developer.apple.com/documentation/security/1396080-seccertificatecopydata  and https://developer.apple.com/documentation/security/3747134-sectrustcopycertificatechain
+// The certificate object for which you wish to return the DER (Distinguished Encoding Rules) representation of the X.509 certificate.
+func (c *CertificateRef) GetCertChainDataWithAnchor(anchor []*CertificateRef) ([][]byte, error) {
+	return c.getCertChainData(anchor)
+}
+
+// SetTrustAnchorCertificates returns a [][]byte containing the bytes of the certificate chain for the given cert.
+// See: https://developer.apple.com/documentation/security/1396098-sectrustsetanchorcertificates
+// The certificate object for which you wish to return the DER (Distinguished Encoding Rules) representation of the X.509 certificate.
+func (c *CertificateRef) SetTrustAnchorCertificates(trust *TrustRef, anchors C.CFMutableArrayRef) ([][]byte, error) {
+	errCode := C.SecTrustSetAnchorCertificates(trust.cTrustRef, C.CFArrayRef(anchors))
+	err := checkError(errCode)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// getCertChainData returns a [][]byte containing the bytes of the certificate chain for the given cert.
+// See:https://developer.apple.com/documentation/security/1396080-seccertificatecopydata  and https://developer.apple.com/documentation/security/3747134-sectrustcopycertificatechain
+// The certificate object for which you wish to return the DER (Distinguished Encoding Rules) representation of the X.509 certificate.
+func (c *CertificateRef) getCertChainData(anchorRefs []*CertificateRef) ([][]byte, error) {
+	// Create the trust reference.
+	trust, err := c.createTrustRef()
+	if err != nil {
+		return nil, err
+	}
+
+	// If they specified anchors, add them along with the existing trust anchors.
+	if len(anchorRefs) > 0 {
+		var cAnchors *MutableArrayRef
+
+		// Get the currently trusted certs.
+		cAnchors, err = TrustCopyAnchorCertificates()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, anchor := range anchorRefs {
+			if anchor == nil {
+				continue
+			}
+
+			// append our cert to the arrayRef.
+			cAnchors.Append(C.CFTypeRef(anchor.cCertificateRef))
+		}
+
+		_, err = c.SetTrustAnchorCertificates(trust, cAnchors.arrayRef)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var cfError C.CFErrorRef
+	// https://developer.apple.com/documentation/security/2980705-sectrustevaluatewitherror
+	//nolint:gocritic//dupSubExpr: suspicious identical LHS and RHS for `==` operator.
+	resultBool := C.SecTrustEvaluateWithError(trust.cTrustRef, &cfError)
+
+	if !bool(resultBool) {
+		err = CFErrorError(cfError)
+		if err != nil {
+			return nil, fmt.Errorf("could not evaluate SecTrust object for certificate: %w", err)
+		}
+	}
+
+	// Now you can use SecTrustGetCertificateCount and SecTrustGetCertificateAtIndex to get the certificates in the chain
+	// https://developer.apple.com/documentation/security/3747134-sectrustcopycertificatechain
+	chainRef := C.SecTrustCopyCertificateChain(trust.cTrustRef)
+	certChainRefs := CFArrayToArray(chainRef)
+	var certChain [][]byte
+	for _, certRef := range certChainRefs {
+		var (
+			cr   *CertificateRef
+			data []byte
+		)
+
+		cr = newCertificateRef(certRef)
+		data, err = cr.GetCertificateData()
+		if err != nil {
+			return nil, err
+		}
+
+		certChain = append(certChain, data)
+	}
+
+	return certChain, nil
+}
+
+// KeyRef contains a reference to a keychain secure key and allows for signing operations
+type KeyRef struct {
+	cKeyRef C.SecKeyRef
+}
+
+// Sign creates the cryptographic signature for the digest using private key KeyRef and returns it as a byte slice
+func (key *KeyRef) SignWithAlgorithm(digest []byte, algo SecKeyAlgorithm) ([]byte, error) {
+	cfDigest, err := BytesToCFData(digest)
+	defer Release(C.CFTypeRef(cfDigest))
+	if err != nil {
+		return nil, err
+	}
+
+	secKeyAlgo, ok := secKeyAlgorithmMap[algo]
+	if !ok {
+		return nil, fmt.Errorf("unsupported security algorithm: %v", algo)
+	}
+
+	// sign the digest
+	var cErr C.CFErrorRef
+
+	//nolint:gocritic//dupSubExpr: suspicious identical LHS and RHS for `==` operator.
+	cSig := C.SecKeyCreateSignature(key.cKeyRef, secKeyAlgo, cfDigest, &cErr)
+	if err := CFErrorError(cErr); err != nil {
+		defer Release(C.CFTypeRef(cErr))
+		return nil, err
+	}
+
+	//nolint:gocritic//dupSubExpr: suspicious identical LHS and RHS for `==` operator.
+	defer Release(C.CFTypeRef(cSig))
+
+	sig, err := CFDataToBytes(cSig)
+	if err != nil {
+		return nil, err
+	}
+
+	return sig, nil
+}
+
+// Sign creates the cryptographic signature for the digest using private key KeyRef and returns it as a byte slice
+func (key *KeyRef) SignWithHash(digest []byte, hash crypto.Hash, publicKey crypto.PublicKey) ([]byte, error) {
+	cfDigest, err := BytesToCFData(digest)
+	defer Release(C.CFTypeRef(cfDigest))
+	if err != nil {
+		return nil, err
+	}
+
+	algo, err := getAlgo(publicKey, hash)
+	if err != nil {
+		return nil, err
+	}
+	// sign the digest
+	var cErr C.CFErrorRef
+
+	//nolint:gocritic//dupSubExpr: suspicious identical LHS and RHS for `==` operator.
+	cSig := C.SecKeyCreateSignature(key.cKeyRef, algo, cfDigest, &cErr)
+	if err := CFErrorError(cErr); err != nil {
+		defer Release(C.CFTypeRef(cErr))
+		return nil, err
+	}
+
+	//nolint:gocritic//dupSubExpr: suspicious identical LHS and RHS for `==` operator.
+	defer Release(C.CFTypeRef(cSig))
+
+	sig, err := CFDataToBytes(cSig)
+	if err != nil {
+		return nil, err
+	}
+
+	return sig, nil
+}
+
+func (key *KeyRef) GetPersistentRef() ([]byte, error) {
+	item := NewItem()
+	item.SetValueRef(C.CFTypeRef(key.cKeyRef))
+	item.SetSecClass(SecClassCryptoKey)
+	item.SetMatchLimit(MatchLimitAll)
+	item.SetReturnRef(true)
+	item.SetReturnPersistentRef(true)
+	item.SetReturnAttributes(true)
+	res, err := QueryItem(item)
+	if err != nil {
+		return nil, err
+	}
+	if res == nil {
+		return nil, nil
+	}
+	if len(res) > 1 {
+		log.Printf("More than 1 result in KeyRef.GetPersistentRef: %v\n", len(res))
+	}
+	for _, queryResult := range res {
+		if len(queryResult.PersistentRef) > 0 {
+			if queryResult.HasKey {
+				return queryResult.PersistentRef, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+func (key *KeyRef) Release() {
+	Release(C.CFTypeRef(key.cKeyRef))
+}
+
+// getAlgo decides which algorithm to use with this key type for the given hash.
+func getAlgo(pubKey crypto.PublicKey, hash crypto.Hash) (C.SecKeyAlgorithm, error) {
+	var algo C.SecKeyAlgorithm
+	var err error
+	switch pubKey.(type) {
+	case *ecdsa.PublicKey:
+		switch hash {
+		case crypto.SHA1:
+			algo = C.kSecKeyAlgorithmECDSASignatureDigestX962SHA1
+		case crypto.SHA256:
+			algo = C.kSecKeyAlgorithmECDSASignatureDigestX962SHA256
+		case crypto.SHA384:
+			algo = C.kSecKeyAlgorithmECDSASignatureDigestX962SHA384
+		case crypto.SHA512:
+			algo = C.kSecKeyAlgorithmECDSASignatureDigestX962SHA512
+		default:
+			err = fmt.Errorf("unsupported hash")
+		}
+	case *rsa.PublicKey:
+		switch hash {
+		case crypto.SHA1:
+			algo = C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA1
+		case crypto.SHA256:
+			algo = C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA256
+		case crypto.SHA384:
+			algo = C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA384
+		case crypto.SHA512:
+			algo = C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA512
+		default:
+			err = fmt.Errorf("unsupported hash")
+		}
+	default:
+		err = fmt.Errorf("unsupported key type: %v", pubKey)
+	}
+
+	return algo, err
+}
+
+type IdentityRef struct {
+	cIdentityRef C.SecIdentityRef
+}
+
+func (i *IdentityRef) GetCertificate() (*CertificateRef, error) {
+	var certRef C.SecCertificateRef
+
+	//nolint:gocritic//dupSubExpr: suspicious identical LHS and RHS for `==` operator.
+	errRef := C.SecIdentityCopyCertificate(i.cIdentityRef, &certRef)
+	err := checkError(errRef)
+	if err != nil {
+		return nil, fmt.Errorf("could not copy certificate from identity: %v", err)
+	}
+
+	cert := &CertificateRef{certRef}
+	runtime.SetFinalizer(cert, func(certRef *CertificateRef) {
+		Release(C.CFTypeRef(certRef.cCertificateRef))
+	})
+
+	return cert, nil
+}
+
+func (i *IdentityRef) GetKey() (*KeyRef, error) {
+	var keyRef C.SecKeyRef
+
+	//nolint:gocritic//dupSubExpr: suspicious identical LHS and RHS for `==` operator.
+	errRef := C.SecIdentityCopyPrivateKey(i.cIdentityRef, &keyRef)
+
+	err := checkError(errRef)
+	if err != nil {
+		return nil, fmt.Errorf("could not copy key from identity: %v", err)
+	}
+
+	key := &KeyRef{keyRef}
+	runtime.SetFinalizer(key, func(keyRef *KeyRef) {
+		Release(C.CFTypeRef(keyRef.cKeyRef))
+	})
+
+	return key, nil
+}
+
+// CertificateCreateWithData returns the certificate as a byte slice.
+// See:https://developer.apple.com/documentation/security/1396073-seccertificatecreatewithdata
+// See: https://developer.apple.com/documentation/security/certificate_key_and_trust_services/certificates/getting_a_certificate
+// The certificate object for which you wish to return the DER (Distinguished Encoding Rules) representation of the X.509 certificate.
+func CertificateCreateWithData(derData []byte) (*CertificateRef, error) {
+	// first we need to convert the DER encoded data into a CFData we can pass into the api.
+	cfData, err := BytesToCFData(derData)
+	if err != nil {
+		return nil, err
+	}
+	defer Release(C.CFTypeRef(cfData))
+
+	certRef := C.SecCertificateCreateWithData(C.kCFAllocatorDefault, cfData)
+	cert := &CertificateRef{certRef}
+	runtime.SetFinalizer(cert, func(certRef *CertificateRef) {
+		Release(C.CFTypeRef(certRef.cCertificateRef))
+	})
+
+	return cert, nil
+}
+
+// Using a CA that is not in the keychain for certificate trust.
+// https://developer.apple.com/documentation/security/1396098-sectrustsetanchorcertificates
+// 1. Convert the DER CA into bytes (CertificateCreateWithData) https://developer.apple.com/documentation/security/1396073-seccertificatecreatewithdata
+// 2. Create the certificate.
+// 3. Add the trust anchor to the cert.
+// 4. evaluate.
+
+// MutableArrayRef for wrapping an array.
+type MutableArrayRef struct {
+	arrayRef C.CFMutableArrayRef
+}
+
+// TrustCopyAnchorCertificates retrieves the certificates in the system’s store of anchor certificates (see SecTrustSetAnchorCertificates(_:_:)).
+// You can use the SecCertificate objects retrieved by this function as input to other functions of this API, such as SecTrustCreateWithCertificates(_:_:_:).
+// See: https://developer.apple.com/documentation/security/1401507-sectrustcopyanchorcertificates/
+func TrustCopyAnchorCertificates() (*MutableArrayRef, error) {
+	arrayRef := newEmptyArray(5)
+	cfArray := C.CFArrayRef(arrayRef)
+
+	// https://developer.apple.com/documentation/security/2980705-sectrustevaluatewitherror
+	//nolint:gocritic//dupSubExpr: suspicious identical LHS and RHS for `==` operator.
+	errCode := C.SecTrustCopyAnchorCertificates(&cfArray)
+	err := checkError(errCode)
+	if err != nil {
+		Release(C.CFTypeRef(arrayRef))
+		return nil, err
+	}
+
+	return &MutableArrayRef{arrayRef: arrayRef}, nil
+}
+
+func (a *MutableArrayRef) Append(ref C.CFTypeRef) *MutableArrayRef {
+	C.CFArrayAppendValue(a.arrayRef, unsafe.Pointer(ref))
+
+	return a
 }
