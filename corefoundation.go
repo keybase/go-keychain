@@ -166,7 +166,7 @@ func CFBooleanToBool(b C.CFBooleanRef) bool {
 
 func CFKeyTypeEnumToString(cfNumber C.CFNumberRef) string {
 	var value C.int
-	C.CFNumberGetValue(cfNumber, C.kCFNumberIntType, unsafe.Pointer(&value))
+	C.CFNumberGetValue(cfNumber, C.kCFNumberIntType, unsafe.Pointer(&value)) //nolint
 	return fmt.Sprintf("%d", value)
 }
 
