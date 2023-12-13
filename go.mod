@@ -5,8 +5,8 @@ go 1.19
 require (
 	github.com/keybase/dbus v0.0.0-20220506165403-5aa21ea2c23a
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.8.0
-	golang.org/x/crypto v0.1.0
+	github.com/stretchr/testify v1.8.4
+	golang.org/x/crypto v0.16.0
 )
 
 require (
