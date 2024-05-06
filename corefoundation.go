@@ -7,6 +7,7 @@ package keychain
 #cgo LDFLAGS: -framework CoreFoundation
 
 #include <CoreFoundation/CoreFoundation.h>
+#include <Security/Security.h>
 
 // Can't cast a *uintptr to *unsafe.Pointer in Go, and casting
 // C.CFTypeRef to unsafe.Pointer is unsafe in Go, so have shim functions to
@@ -185,6 +186,12 @@ func ConvertMapToCFDictionary(attr map[string]interface{}) (C.CFDictionaryRef, e
 		switch val := i.(type) {
 		default:
 			return 0, fmt.Errorf("Unsupported value type: %v", reflect.TypeOf(i))
+		case *AuthenticationContext:
+			// Ignore this, the pointer can't be added to the dictionary
+			// This value is used within the QueryItemRef functions
+			continue
+		case C.SecAccessControlRef:
+			valueRef = C.CFTypeRef(val)
 		case C.CFTypeRef:
 			valueRef = val
 		case bool:

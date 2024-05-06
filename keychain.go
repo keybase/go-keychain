@@ -8,10 +8,31 @@ package keychain
 // Also see https://developer.apple.com/library/ios/documentation/Security/Conceptual/keychainServConcepts/01introduction/introduction.html .
 
 /*
-#cgo LDFLAGS: -framework CoreFoundation -framework Security
+#cgo CFLAGS: -x objective-c
+#cgo LDFLAGS: -framework LocalAuthentication -framework Security -framework CoreFoundation
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/Security.h>
+#include <LocalAuthentication/LocalAuthentication.h>
+
+typedef struct {
+	int AllowableReuseDuration;
+} LAContextOptions;
+
+LAContext* CreateLAContext(LAContextOptions options) {
+	LAContext *context = [[LAContext alloc] init];
+	context.touchIDAuthenticationAllowableReuseDuration = options.AllowableReuseDuration;
+	return context;
+}
+
+CFDictionaryRef AddContextToQuery(CFDictionaryRef query, LAContext *context) {
+	CFMutableDictionaryRef newQuery = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, query);
+	CFDictionarySetValue(newQuery, kSecUseAuthenticationContext, context);
+
+	// Convert back to CFDictionaryRef
+	return newQuery;
+}
+
 */
 import "C"
 import (
@@ -21,6 +42,25 @@ import (
 
 // Error defines keychain errors
 type Error int
+
+type AuthenticationContext struct {
+	ptr *C.LAContext
+}
+
+// LAContextOptions is the options for creating a LAContext
+type AuthenticationContextOptions struct {
+	AllowableReuseDuration int
+}
+
+const (
+	nilSecKey           C.SecKeyRef           = 0
+	nilCFData           C.CFDataRef           = 0
+	nilCFString         C.CFStringRef         = 0
+	nilCFDictionary     C.CFDictionaryRef     = 0
+	nilCFError          C.CFErrorRef          = 0
+	nilCFType           C.CFTypeRef           = 0
+	nilSecAccessControl C.SecAccessControlRef = 0
+)
 
 var (
 	// ErrorUnimplemented corresponds to errSecUnimplemented result code
@@ -168,13 +208,14 @@ var (
 	PortKey = attrKey(C.CFTypeRef(C.kSecAttrPort))
 	// PathKey is for kSecAttrPath
 	PathKey = attrKey(C.CFTypeRef(C.kSecAttrPath))
-
 	// LabelKey is for kSecAttrLabel
 	LabelKey = attrKey(C.CFTypeRef(C.kSecAttrLabel))
 	// AccountKey is for kSecAttrAccount
 	AccountKey = attrKey(C.CFTypeRef(C.kSecAttrAccount))
 	// AccessGroupKey is for kSecAttrAccessGroup
 	AccessGroupKey = attrKey(C.CFTypeRef(C.kSecAttrAccessGroup))
+	// AccessControlKey is for kSecAttrAccessControl
+	AccessControlKey = attrKey(C.CFTypeRef(C.kSecAttrAccessControl))
 	// DataKey is for kSecValueData
 	DataKey = attrKey(C.CFTypeRef(C.kSecValueData))
 	// DescriptionKey is for kSecAttrDescription
@@ -229,6 +270,20 @@ const (
 	AccessibleAfterFirstUnlockThisDeviceOnly = 6
 	// AccessibleAccessibleAlwaysThisDeviceOnly is always for this device only
 	AccessibleAccessibleAlwaysThisDeviceOnly = 7
+)
+
+type AccessControlFlags C.SecAccessControlCreateFlags
+
+const (
+	AccessControlFlagsUserPresence        AccessControlFlags = C.kSecAccessControlUserPresence
+	AccessControlFlagsBiometryAny         AccessControlFlags = C.kSecAccessControlBiometryAny
+	AccessControlFlagsBiometryCurrentSet  AccessControlFlags = C.kSecAccessControlBiometryCurrentSet
+	AccessControlFlagsDevicePasscode      AccessControlFlags = C.kSecAccessControlDevicePasscode
+	AccessControlFlagsWatch               AccessControlFlags = C.kSecAccessControlWatch
+	AccessControlFlagsOr                  AccessControlFlags = C.kSecAccessControlOr
+	AccessControlFlagsAnd                 AccessControlFlags = C.kSecAccessControlAnd
+	AccessControlFlagsPrivateKeyUsage     AccessControlFlags = C.kSecAccessControlPrivateKeyUsage
+	AccessControlFlagsApplicationPassword AccessControlFlags = C.kSecAccessControlApplicationPassword
 )
 
 // MatchLimit is whether to limit results on query
@@ -353,6 +408,28 @@ func (k *Item) SetAccessGroup(ag string) {
 	k.SetString(AccessGroupKey, ag)
 }
 
+func CreateAuthenticationContext(options AuthenticationContextOptions) *AuthenticationContext {
+	return &AuthenticationContext{ptr: C.CreateLAContext(C.LAContextOptions{AllowableReuseDuration: C.int(options.AllowableReuseDuration)})}
+}
+
+func (k *Item) SetAuthenticationContext(context *AuthenticationContext) {
+	k.attr[AccessControlKey] = context
+}
+
+func (k *Item) SetAccessControl(flags AccessControlFlags) error {
+	protection := C.kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+
+	var err *C.CFErrorRef
+	ac := C.SecAccessControlCreateWithFlags(C.kCFAllocatorDefault, C.CFTypeRef(protection), C.SecAccessControlCreateFlags(flags), err)
+
+	if err != nil {
+		return fmt.Errorf("failed to create access control: %+v", err)
+	}
+
+	k.attr[AccessControlKey] = ac
+	return nil
+}
+
 // SetSynchronizable sets the synchronizable attribute
 func (k *Item) SetSynchronizable(sync Synchronizable) {
 	if sync != SynchronizableDefault {
@@ -420,6 +497,11 @@ func AddItem(item Item) error {
 	}
 	defer Release(C.CFTypeRef(cfDict))
 
+	context, ok := item.attr[AccessControlKey].(*AuthenticationContext)
+	if ok {
+		cfDict = C.AddContextToQuery(cfDict, context.ptr)
+	}
+
 	errCode := C.SecItemAdd(cfDict, nil)
 	err = checkError(errCode)
 	return err
@@ -437,6 +519,12 @@ func UpdateItem(queryItem Item, updateItem Item) error {
 		return err
 	}
 	defer Release(C.CFTypeRef(cfDictUpdate))
+
+	context, ok := queryItem.attr[AccessControlKey].(*AuthenticationContext)
+	if ok {
+		cfDict = C.AddContextToQuery(cfDict, context.ptr)
+	}
+
 	errCode := C.SecItemUpdate(cfDict, cfDictUpdate)
 	err = checkError(errCode)
 	return err
@@ -474,6 +562,12 @@ func QueryItemRef(item Item) (C.CFTypeRef, error) {
 	defer Release(C.CFTypeRef(cfDict))
 
 	var resultsRef C.CFTypeRef
+
+	context, ok := item.attr[AccessControlKey].(*AuthenticationContext)
+	if ok {
+		cfDict = C.AddContextToQuery(cfDict, context.ptr)
+	}
+
 	errCode := C.SecItemCopyMatching(cfDict, &resultsRef) //nolint
 	if Error(errCode) == ErrorItemNotFound {
 		return 0, nil
@@ -598,6 +692,11 @@ func DeleteItem(item Item) error {
 		return err
 	}
 	defer Release(C.CFTypeRef(cfDict))
+
+	context, ok := item.attr[AccessControlKey].(*AuthenticationContext)
+	if ok {
+		cfDict = C.AddContextToQuery(cfDict, context.ptr)
+	}
 
 	errCode := C.SecItemDelete(cfDict)
 	return checkError(errCode)
