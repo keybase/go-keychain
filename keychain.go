@@ -9,9 +9,10 @@ package keychain
 
 /*
 #cgo CFLAGS: -x objective-c
-#cgo LDFLAGS: -framework LocalAuthentication -framework Security -framework CoreFoundation
+#cgo LDFLAGS: -framework LocalAuthentication -framework Security -framework CoreFoundation -framework Foundation
 
 #include <CoreFoundation/CoreFoundation.h>
+#include <Foundation/Foundation.h>
 #include <Security/Security.h>
 #include <LocalAuthentication/LocalAuthentication.h>
 
@@ -33,6 +34,26 @@ static CFDictionaryRef AddContextToQuery(CFDictionaryRef query, LAContext *conte
 	return newQuery;
 }
 
+// This ensures that the Data protection keychain is only used within a signed .app bundle
+BOOL isAppBinary() {
+    @autoreleasepool {
+        // Get the main bundle of the current application
+        NSBundle *bundle = [NSBundle mainBundle];
+        NSString *executablePath = [bundle executablePath];  // Path to the current binary
+
+        // Check if executablePath is within a .app bundle structure
+        if ([executablePath rangeOfString:@".app/Contents/MacOS"].location != NSNotFound) {
+            NSString *appBundlePath = [executablePath substringToIndex:[executablePath rangeOfString:@".app/"].location + 4];
+
+            // Check for the presence of 'embedded.provisionprofile'
+            NSString *provisionPath = [appBundlePath stringByAppendingPathComponent:@"Contents/embedded.provisionprofile"];
+            BOOL provisionExists = [[NSFileManager defaultManager] fileExistsAtPath:provisionPath];
+
+            return provisionExists;  // Confirm both .app structure and provisioning profile
+        }
+    }
+    return NO;  // Not within a .app bundle
+}
 */
 import "C"
 import (
@@ -320,6 +341,14 @@ type Item struct {
 	attr map[string]interface{}
 }
 
+func IsWithinMacAppBundle() bool {
+	return bool(C.isAppBinary())
+}
+
+func CanUseDataProtectionKeychain() bool {
+	return IsWithinMacAppBundle()
+}
+
 // SetSecClass sets the security class
 func (k *Item) SetSecClass(sc SecClass) {
 	k.attr[SecClassKey] = secClassTypeRef[sc]
@@ -412,15 +441,22 @@ func CreateAuthenticationContext(options AuthenticationContextOptions) *Authenti
 	return &AuthenticationContext{ptr: C.CreateLAContext(C.LAContextOptions{AllowableReuseDuration: C.int(options.AllowableReuseDuration)})}
 }
 
-func (k *Item) SetAuthenticationContext(context *AuthenticationContext) {
+func (k *Item) SetAuthenticationContext(context *AuthenticationContext) error {
+	if !CanUseDataProtectionKeychain() {
+		return fmt.Errorf("SetAuthenticationContext is not available, application must be within a signed .app bundle to access the data protection keychain")
+	}
+
 	k.attr[AccessControlKey] = context
+	return nil
 }
 
-func (k *Item) SetAccessControl(flags AccessControlFlags) error {
-	protection := C.kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+func (k *Item) SetAccessControl(flags AccessControlFlags, accessible Accessible) error {
+	if !CanUseDataProtectionKeychain() {
+		return fmt.Errorf("SetAccessControl is not available, application must be within a signed .app bundle to access the data protection keychain")
+	}
 
 	var err *C.CFErrorRef
-	ac := C.SecAccessControlCreateWithFlags(C.kCFAllocatorDefault, C.CFTypeRef(protection), C.SecAccessControlCreateFlags(flags), err)
+	ac := C.SecAccessControlCreateWithFlags(C.kCFAllocatorDefault, C.CFTypeRef(accessible), C.SecAccessControlCreateFlags(flags), err)
 
 	if err != nil {
 		return fmt.Errorf("failed to create access control: %+v", err)
