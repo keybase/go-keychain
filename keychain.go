@@ -35,7 +35,7 @@ static CFDictionaryRef AddContextToQuery(CFDictionaryRef query, LAContext *conte
 }
 
 // This ensures that the Data protection keychain is only used within a signed .app bundle
-BOOL isAppBinary() {
+int isAppBinary() {
     @autoreleasepool {
         // Get the main bundle of the current application
         NSBundle *bundle = [NSBundle mainBundle];
@@ -49,10 +49,10 @@ BOOL isAppBinary() {
             NSString *provisionPath = [appBundlePath stringByAppendingPathComponent:@"Contents/embedded.provisionprofile"];
             BOOL provisionExists = [[NSFileManager defaultManager] fileExistsAtPath:provisionPath];
 
-            return provisionExists;  // Confirm both .app structure and provisioning profile
+            return provisionExists ? 1 : 0;
         }
     }
-    return NO;  // Not within a .app bundle
+    return 0;  // Return 0 if not within a .app bundle
 }
 */
 import "C"
@@ -344,7 +344,7 @@ type Item struct {
 }
 
 func IsWithinMacAppBundle() bool {
-	return bool(C.isAppBinary())
+	return C.isAppBinary() != 0
 }
 
 func CanUseDataProtectionKeychain() bool {
