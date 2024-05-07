@@ -247,6 +247,8 @@ var (
 	CreationDateKey = attrKey(C.CFTypeRef(C.kSecAttrCreationDate))
 	// ModificationDateKey is for kSecAttrModificationDate
 	ModificationDateKey = attrKey(C.CFTypeRef(C.kSecAttrModificationDate))
+	// UseDataProtectionKeychainKey is for kSecAttrUseDataProtectionKeychain
+	UseDataProtectionKeychainKey = attrKey(C.CFTypeRef(C.kSecUseDataProtectionKeychain))
 )
 
 // Synchronizable is the items synchronizable status
@@ -456,13 +458,22 @@ func (k *Item) SetAccessControl(flags AccessControlFlags, accessible Accessible)
 	}
 
 	var err *C.CFErrorRef
-	ac := C.SecAccessControlCreateWithFlags(C.kCFAllocatorDefault, C.CFTypeRef(accessible), C.SecAccessControlCreateFlags(flags), err)
+	ac := C.SecAccessControlCreateWithFlags(C.kCFAllocatorDefault, accessibleTypeRef[accessible], C.SecAccessControlCreateFlags(flags), err)
 
 	if err != nil {
 		return fmt.Errorf("failed to create access control: %+v", err)
 	}
 
 	k.attr[AccessControlKey] = ac
+	return nil
+}
+
+func (k *Item) SetUseDataProtectionKeychain(canUse bool) error {
+	if !CanUseDataProtectionKeychain() {
+		return fmt.Errorf("SetUseDataProtectionKeychain is not available, application must be within a signed .app bundle to access the data protection keychain")
+	}
+
+	k.attr[UseDataProtectionKeychainKey] = canUse
 	return nil
 }
 
