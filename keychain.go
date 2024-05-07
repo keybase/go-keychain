@@ -19,13 +19,13 @@ typedef struct {
 	int AllowableReuseDuration;
 } LAContextOptions;
 
-LAContext* CreateLAContext(LAContextOptions options) {
+static LAContext* CreateLAContext(LAContextOptions options) {
 	LAContext *context = [[LAContext alloc] init];
 	context.touchIDAuthenticationAllowableReuseDuration = options.AllowableReuseDuration;
 	return context;
 }
 
-CFDictionaryRef AddContextToQuery(CFDictionaryRef query, LAContext *context) {
+static CFDictionaryRef AddContextToQuery(CFDictionaryRef query, LAContext *context) {
 	CFMutableDictionaryRef newQuery = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, query);
 	CFDictionarySetValue(newQuery, kSecUseAuthenticationContext, context);
 
