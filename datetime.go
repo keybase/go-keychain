@@ -34,8 +34,8 @@ func unixToAbsoluteTime(s int64, ns int64) C.CFAbsoluteTime {
 }
 
 func absoluteTimeToUnix(abs C.CFAbsoluteTime) (int64, int64) {
-	int, frac := math.Modf(float64(abs))
-	return int64(int) + absoluteTimeIntervalSince1970(), int64(frac * nsPerSec)
+	i, frac := math.Modf(float64(abs))
+	return int64(i) + absoluteTimeIntervalSince1970(), int64(frac * nsPerSec)
 }
 
 // TimeToCFDate will convert the given time.Time to a CFDateRef, which

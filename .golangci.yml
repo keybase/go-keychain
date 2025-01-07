@@ -9,3 +9,5 @@ linters:
     - gofmt
     - gocritic
     - unconvert
+    - revive
+    - govet

@@ -25,7 +25,7 @@ func TestKeyringDH(t *testing.T) {
 func testKeyring(t *testing.T, mode AuthenticationMode) {
 	srv, err := NewService()
 	require.NoError(t, err)
-	session, err := srv.OpenSession(AuthenticationDHAES)
+	session, err := srv.OpenSession(mode)
 	require.NoError(t, err)
 	defer srv.CloseSession(session)
 
