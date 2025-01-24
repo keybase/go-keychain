@@ -122,3 +122,5 @@ To re-generate framework:
 ```
 (cd bind && gomobile bind -target=ios -tags=ios -o ../ios/bind.framework)
 ```
+
+Post issues to: https://github.com/keybase/keybase-issues
