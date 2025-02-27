@@ -185,7 +185,7 @@ func (s *SecretService) CloseSession(session *Session) {
 	s.Obj(session.Path).Call("org.freedesktop.Secret.Session.Close", NilFlags)
 }
 
-// SearchColleciton
+// SearchCollection
 func (s *SecretService) SearchCollection(collection dbus.ObjectPath, attributes Attributes) (items []dbus.ObjectPath, err error) {
 	err = s.Obj(collection).
 		Call("org.freedesktop.Secret.Collection.SearchItems", NilFlags, attributes).
