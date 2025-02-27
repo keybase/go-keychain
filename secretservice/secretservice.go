@@ -101,7 +101,10 @@ func (s *SecretService) openSessionRaw(mode AuthenticationMode, sessionAlgorithm
 	err = s.ServiceObj().
 		Call("org.freedesktop.Secret.Service.OpenSession", NilFlags, mode, sessionAlgorithmInput).
 		Store(&resp.algorithmOutput, &resp.path)
-	return resp, errors.Wrap(err, "failed to open secretservice session")
+	if err != nil {
+		return sessionOpenResponse{}, errors.Wrap(err, "failed to open secretservice session")
+	}
+	return resp, nil
 }
 
 // OpenSession
