@@ -134,11 +134,11 @@ func (s *SecretService) OpenSession(mode AuthenticationMode) (session *Session, 
 	sessionOpenCh := make(chan sessionOpenResponse)
 	errCh := make(chan error)
 	go func() {
-		sessionOpenResponse, err := s.openSessionRaw(mode, sessionAlgorithmInput)
+		resp, err := s.openSessionRaw(mode, sessionAlgorithmInput)
 		if err != nil {
 			errCh <- err
 		} else {
-			sessionOpenCh <- sessionOpenResponse
+			sessionOpenCh <- resp
 		}
 	}()
 
