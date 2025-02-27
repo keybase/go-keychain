@@ -342,7 +342,7 @@ func (s *SecretService) PromptAndWait(prompt dbus.ObjectPath) (paths *dbus.Varia
 	}
 	call := s.Obj(prompt).Call("org.freedesktop.Secret.Prompt.Prompt", NilFlags, "Keyring Prompt")
 	if call.Err != nil {
-		return nil, errors.Wrap(err, "failed to prompt")
+		return nil, errors.Wrap(call.Err, "failed to prompt")
 	}
 	for {
 		var result PromptCompletedResult
