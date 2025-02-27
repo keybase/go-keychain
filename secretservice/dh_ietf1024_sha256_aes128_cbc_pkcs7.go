@@ -17,11 +17,11 @@ import (
 	"crypto/cipher"
 	cryptorand "crypto/rand"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
 
-	errors "github.com/pkg/errors"
 	"golang.org/x/crypto/hkdf"
 )
 
