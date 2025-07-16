@@ -28,7 +28,10 @@ CFArrayRef CFArrayCreateSafe2(CFAllocatorRef allocator, const uintptr_t *values,
 }
 */
 import "C"
+
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"math"
@@ -216,6 +219,18 @@ func ConvertMapToCFDictionary(attr map[string]interface{}) (C.CFDictionaryRef, e
 				return 0, err
 			}
 			valueRef = convertedRef
+			defer Release(valueRef)
+		case map[string]any:
+			var b bytes.Buffer
+			enc := gob.NewEncoder(&b)
+			if err := enc.Encode(val); err != nil {
+				return 0, err
+			}
+			mapRef, err := BytesToCFData(b.Bytes())
+			if err != nil {
+				return 0, err
+			}
+			valueRef = C.CFTypeRef(mapRef)
 			defer Release(valueRef)
 		}
 		keyRef, err := StringToCFString(key)

@@ -14,7 +14,10 @@ package keychain
 #include <Security/Security.h>
 */
 import "C"
+
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"time"
 )
@@ -148,11 +151,13 @@ var (
 )
 
 // SecClassKey is the key type for SecClass
-var SecClassKey = attrKey(C.CFTypeRef(C.kSecClass))
-var secClassTypeRef = map[SecClass]C.CFTypeRef{
-	SecClassGenericPassword:  C.CFTypeRef(C.kSecClassGenericPassword),
-	SecClassInternetPassword: C.CFTypeRef(C.kSecClassInternetPassword),
-}
+var (
+	SecClassKey     = attrKey(C.CFTypeRef(C.kSecClass))
+	secClassTypeRef = map[SecClass]C.CFTypeRef{
+		SecClassGenericPassword:  C.CFTypeRef(C.kSecClassGenericPassword),
+		SecClassInternetPassword: C.CFTypeRef(C.kSecClassInternetPassword),
+	}
+)
 
 var (
 	// ServiceKey is for kSecAttrService
@@ -185,6 +190,8 @@ var (
 	CreationDateKey = attrKey(C.CFTypeRef(C.kSecAttrCreationDate))
 	// ModificationDateKey is for kSecAttrModificationDate
 	ModificationDateKey = attrKey(C.CFTypeRef(C.kSecAttrModificationDate))
+
+	AttrGenericKey = attrKey(C.CFTypeRef(C.kSecAttrGeneric))
 )
 
 // Synchronizable is the items synchronizable status
@@ -202,12 +209,14 @@ const (
 )
 
 // SynchronizableKey is the key type for Synchronizable
-var SynchronizableKey = attrKey(C.CFTypeRef(C.kSecAttrSynchronizable))
-var syncTypeRef = map[Synchronizable]C.CFTypeRef{
-	SynchronizableAny: C.CFTypeRef(C.kSecAttrSynchronizableAny),
-	SynchronizableYes: C.CFTypeRef(C.kCFBooleanTrue),
-	SynchronizableNo:  C.CFTypeRef(C.kCFBooleanFalse),
-}
+var (
+	SynchronizableKey = attrKey(C.CFTypeRef(C.kSecAttrSynchronizable))
+	syncTypeRef       = map[Synchronizable]C.CFTypeRef{
+		SynchronizableAny: C.CFTypeRef(C.kSecAttrSynchronizableAny),
+		SynchronizableYes: C.CFTypeRef(C.kCFBooleanTrue),
+		SynchronizableNo:  C.CFTypeRef(C.kCFBooleanFalse),
+	}
+)
 
 // Accessible is the items accessibility
 type Accessible int
@@ -244,11 +253,13 @@ const (
 )
 
 // MatchLimitKey is key type for MatchLimit
-var MatchLimitKey = attrKey(C.CFTypeRef(C.kSecMatchLimit))
-var matchTypeRef = map[MatchLimit]C.CFTypeRef{
-	MatchLimitOne: C.CFTypeRef(C.kSecMatchLimitOne),
-	MatchLimitAll: C.CFTypeRef(C.kSecMatchLimitAll),
-}
+var (
+	MatchLimitKey = attrKey(C.CFTypeRef(C.kSecMatchLimit))
+	matchTypeRef  = map[MatchLimit]C.CFTypeRef{
+		MatchLimitOne: C.CFTypeRef(C.kSecMatchLimitOne),
+		MatchLimitAll: C.CFTypeRef(C.kSecMatchLimitAll),
+	}
+)
 
 // ReturnAttributesKey is key type for kSecReturnAttributes
 var ReturnAttributesKey = attrKey(C.CFTypeRef(C.kSecReturnAttributes))
@@ -346,6 +357,13 @@ func (k *Item) SetData(b []byte) {
 	} else {
 		delete(k.attr, DataKey)
 	}
+}
+
+func (k *Item) SetGenericMetadata(m map[string]any) {
+	if m == nil {
+		return
+	}
+	k.attr[AttrGenericKey] = m
 }
 
 // SetAccessGroup sets the access group attribute
@@ -463,6 +481,8 @@ type QueryResult struct {
 	Data             []byte
 	CreationDate     time.Time
 	ModificationDate time.Time
+
+	Attributes map[string]interface{}
 }
 
 // QueryItemRef returns query result as CFTypeRef. You must release it when you are done.
@@ -575,6 +595,17 @@ func convertResult(d C.CFDictionaryRef) (*QueryResult, error) {
 			result.CreationDate = CFDateToTime(C.CFDateRef(v))
 		case ModificationDateKey:
 			result.ModificationDate = CFDateToTime(C.CFDateRef(v))
+		case AttrGenericKey:
+			b, err := CFDataToBytes(C.CFDataRef(v))
+			if err != nil {
+				return nil, err
+			}
+			dec := gob.NewDecoder(bytes.NewReader(b))
+			attributes := make(map[string]any)
+			if err := dec.Decode(&attributes); err != nil {
+				return nil, err
+			}
+			result.Attributes = attributes
 			// default:
 			// fmt.Printf("Unhandled key in conversion: %v = %v\n", cfTypeValue(k), cfTypeValue(v))
 		}
