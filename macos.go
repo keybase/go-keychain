@@ -10,7 +10,7 @@ package keychain
 */
 import "C"
 
-// AccessibleKey is key for kSecAttrAccessible
+// AccessibleKey is key for kSecAttrAccessible.
 var AccessibleKey = attrKey(C.CFTypeRef(C.kSecAttrAccessible))
 var accessibleTypeRef = map[Accessible]C.CFTypeRef{
 	AccessibleWhenUnlocked:                   C.CFTypeRef(C.kSecAttrAccessibleWhenUnlocked),

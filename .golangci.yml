@@ -1,13 +1,104 @@
-linters-settings:
-  gocritic:
-    disabled-checks:
-      - ifElseChain
-      - elseif
-
-linters:
+formatters:
   enable:
     - gofmt
+  exclusions:
+    paths:
+      - .*_mock\.go
+      - mock_.*\.go
+      - .*/pkg/mod/.*$
+      - .*/go/src/.*\.go
+      - third_party$
+      - builtin$
+      - examples$
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - go.opentelemetry.io
+issues:
+  max-issues-per-linter: 50
+linters:
+  default: none
+  enable:
+    - asciicheck
+    - bodyclose
+    - dogsled
+    - durationcheck
+    - errcheck
+    - errorlint
+    - exhaustive
+    - forbidigo
+    - forcetypeassert
+    - goconst
     - gocritic
-    - unconvert
-    - revive
+    - gocyclo
+    - godot
+    - gosec
     - govet
+    - ineffassign
+    - misspell
+    - nestif
+    - nilerr
+    - nlreturn
+    - noctx
+    - prealloc
+    - predeclared
+    - revive
+    - sqlclosecheck
+    - staticcheck
+    - unconvert
+    - unused
+    - whitespace
+    - wrapcheck
+    - wsl_v5
+  exclusions:
+    paths:
+      - .*_mock\.go
+      - mock_.*\.go
+      - .*/pkg/mod/.*$
+      - .*/go/src/.*\.go
+      - third_party$
+      - builtin$
+      - examples$
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+  settings:
+    depguard:
+      rules:
+        main:
+          allow:
+            - $all
+    dupl:
+      threshold: 99
+    errcheck:
+      check-blank: false
+      check-type-assertions: false
+    goconst:
+      min-len: 3
+      min-occurrences: 2
+    gocyclo:
+      min-complexity: 18
+    govet:
+      disable:
+        - shadow
+    misspell:
+      ignore-rules:
+        - cancelled
+      locale: US
+    revive:
+      severity: warning
+output:
+  formats:
+    text:
+      path: stdout
+      print-issued-lines: true
+      print-linter-name: true
+run:
+  concurrency: 4
+  issues-exit-code: 1
+  tests: false
+version: "2"

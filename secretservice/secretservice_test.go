@@ -2,15 +2,15 @@
 // keyring with a default collection created.
 // It should prompt you for your keyring password twice.
 
-//go:build !skipsecretserviceintegrationtests
-// +build !skipsecretserviceintegrationtests
+//go:build !skipsecretserviceintegrationtests && linux
+// +build !skipsecretserviceintegrationtests,linux
 
 package secretservice
 
 import (
 	"testing"
 
-	dbus "github.com/keybase/dbus"
+	dbus "github.com/godbus/dbus/v5"
 	"github.com/stretchr/testify/require"
 )
 

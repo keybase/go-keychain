@@ -30,11 +30,13 @@ func unixToAbsoluteTime(s int64, ns int64) C.CFAbsoluteTime {
 	// isn't much earlier than the Core Foundation absolute
 	// reference date).
 	abs := s - absoluteTimeIntervalSince1970()
+
 	return C.CFAbsoluteTime(abs) + C.CFTimeInterval(ns)/nsPerSec
 }
 
 func absoluteTimeToUnix(abs C.CFAbsoluteTime) (int64, int64) {
 	i, frac := math.Modf(float64(abs))
+
 	return int64(i) + absoluteTimeIntervalSince1970(), int64(frac * nsPerSec)
 }
 
@@ -44,24 +46,27 @@ func TimeToCFDate(t time.Time) C.CFDateRef {
 	s := t.Unix()
 	ns := int64(t.Nanosecond())
 	abs := unixToAbsoluteTime(s, ns)
-	return C.CFDateCreate(C.kCFAllocatorDefault, abs)
+
+	return C.CFDateCreate(C.kCFAllocatorDefault, abs) // nolint: nlreturn
 }
 
 // CFDateToTime will convert the given CFDateRef to a time.Time.
 func CFDateToTime(d C.CFDateRef) time.Time {
-	abs := C.CFDateGetAbsoluteTime(d)
+	abs := C.CFDateGetAbsoluteTime(d) // nolint: nlreturn
+
 	s, ns := absoluteTimeToUnix(abs)
+
 	return time.Unix(s, ns)
 }
 
 // Wrappers around C functions for testing.
 
 func cfDateToAbsoluteTime(d C.CFDateRef) C.CFAbsoluteTime {
-	return C.CFDateGetAbsoluteTime(d)
+	return C.CFDateGetAbsoluteTime(d) // nolint: nlreturn
 }
 
 func absoluteTimeToCFDate(abs C.CFAbsoluteTime) C.CFDateRef {
-	return C.CFDateCreate(C.kCFAllocatorDefault, abs)
+	return C.CFDateCreate(C.kCFAllocatorDefault, abs) // nolint: nlreturn
 }
 
 func releaseCFDate(d C.CFDateRef) {
