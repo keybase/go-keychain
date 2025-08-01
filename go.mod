@@ -1,11 +1,13 @@
-module github.com/keybase/go-keychain
+module github.com/mailstone/go-keychain
 
-go 1.21
+go 1.24.0
+
+toolchain go1.24.5
 
 require (
-	github.com/keybase/dbus v0.0.0-20220506165403-5aa21ea2c23a
+	github.com/godbus/dbus/v5 v5.1.0
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/crypto v0.32.0
+	golang.org/x/crypto v0.40.0
 )
 
 require (

@@ -1,3 +1,6 @@
+//go:build linux
+// +build linux
+
 package secretservice
 
 import (
@@ -6,7 +9,7 @@ import (
 	"math/big"
 	"time"
 
-	dbus "github.com/keybase/dbus"
+	dbus "github.com/godbus/dbus/v5"
 )
 
 // SecretServiceInterface

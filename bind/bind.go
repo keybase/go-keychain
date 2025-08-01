@@ -4,36 +4,40 @@
 package bind
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 
-	"github.com/keybase/go-keychain"
+	"github.com/mailstone/go-keychain"
 )
 
-// Test is a bind interface for the test
+// Test is a bind interface for the test.
 type Test interface {
 	Fail(s string)
 }
 
-// AddGenericPassword adds generic password
+// AddGenericPassword adds generic password.
 func AddGenericPassword(service string, account string, label string, password string, accessGroup string) error {
 	item := keychain.NewGenericPassword(service, account, label, []byte(password), accessGroup)
-	return keychain.AddItem(item)
+
+	return keychain.AddItem(item) // nolint: wrapcheck
 }
 
-// DeleteGenericPassword deletes generic password
+// DeleteGenericPassword deletes generic password.
 func DeleteGenericPassword(service string, account string, accessGroup string) error {
 	item := keychain.NewItem()
 	item.SetSecClass(keychain.SecClassGenericPassword)
 	item.SetService(service)
 	item.SetAccount(account)
 	item.SetAccessGroup(accessGroup)
-	return keychain.DeleteItem(item)
+
+	return keychain.DeleteItem(item) // nolint: wrapcheck
 }
 
 // GenericPasswordTest runs test code for generic password keychain item.
 // This is here so we can export using gomobile bind and run this method on iOS simulator and device.
 // Access groups aren't supported in iOS simulator.
+// nolint: gocyclo
 func GenericPasswordTest(t Test, service string, accessGroup string) {
 	var err error
 
@@ -54,6 +58,7 @@ func GenericPasswordTest(t Test, service string, accessGroup string) {
 	if err != nil {
 		t.Fail(err.Error())
 	}
+
 	if len(accounts) != 0 {
 		t.Fail("Should have no accounts")
 	}
@@ -66,7 +71,7 @@ func GenericPasswordTest(t Test, service string, accessGroup string) {
 
 	// Test dupe
 	err = keychain.AddItem(item)
-	if err != keychain.ErrorDuplicateItem {
+	if !errors.Is(err, keychain.ErrorDuplicateItem) {
 		t.Fail("Should error with duplicate item")
 	}
 
@@ -84,6 +89,7 @@ func GenericPasswordTest(t Test, service string, accessGroup string) {
 	query.SetAccessGroup(accessGroup)
 	query.SetMatchLimit(keychain.MatchLimitAll)
 	query.SetReturnAttributes(true)
+
 	results, err := keychain.QueryItem(query)
 	if err != nil {
 		t.Fail(err.Error())
@@ -113,6 +119,7 @@ func GenericPasswordTest(t Test, service string, accessGroup string) {
 	queryData.SetAccessGroup(accessGroup)
 	queryData.SetMatchLimit(keychain.MatchLimitOne)
 	queryData.SetReturnData(true)
+
 	resultsData, err := keychain.QueryItem(queryData)
 	if err != nil {
 		t.Fail(err.Error())
@@ -131,6 +138,7 @@ func GenericPasswordTest(t Test, service string, accessGroup string) {
 	if err != nil {
 		t.Fail(err.Error())
 	}
+
 	if len(accounts2) != 2 {
 		t.Fail(fmt.Sprintf("Should have 2 accounts: %v", accounts2))
 	}
@@ -145,8 +153,8 @@ func GenericPasswordTest(t Test, service string, accessGroup string) {
 	queryDel.SetService(service)
 	queryDel.SetAccount(account)
 	queryDel.SetAccessGroup(accessGroup)
-	err = keychain.DeleteItem(queryDel)
-	if err != nil {
+
+	if err := keychain.DeleteItem(queryDel); err != nil {
 		t.Fail(err.Error())
 	}
 
@@ -158,6 +166,7 @@ func GenericPasswordTest(t Test, service string, accessGroup string) {
 	query3.SetAccessGroup(accessGroup)
 	query3.SetMatchLimit(keychain.MatchLimitAll)
 	query3.SetReturnAttributes(true)
+
 	results3, err := keychain.QueryItem(query3)
 	if err != nil {
 		t.Fail(err.Error())
@@ -171,13 +180,14 @@ func GenericPasswordTest(t Test, service string, accessGroup string) {
 	if err != nil {
 		t.Fail(err.Error())
 	}
+
 	if len(accounts3) != 1 {
 		t.Fail("Should have an account")
 	}
 
 	// Test remove not found
 	err = keychain.DeleteItem(item)
-	if err != keychain.ErrorItemNotFound {
+	if !errors.Is(err, keychain.ErrorItemNotFound) {
 		t.Fail("Error should be not found")
 	}
 }

@@ -1,6 +1,6 @@
 # Go Keychain
 
-[![Build Status](https://github.com/keybase/go-keychain/actions/workflows/ci.yml/badge.svg)](https://github.com/keybase/go-keychain/actions)
+[![Build Status](https://github.com/mailstone/go-keychain/actions/workflows/ci.yml/badge.svg)](https://github.com/mailstone/go-keychain/actions)
 
 A library for accessing the Keychain for macOS, iOS, and Linux in Go (golang).
 
@@ -8,7 +8,7 @@ Requires macOS 10.9 or greater and iOS 8 or greater. On Linux, communicates to
 a provider of the DBUS SecretService spec like gnome-keyring or ksecretservice.
 
 ```go
-import "github.com/keybase/go-keychain"
+import "github.com/mailstone/go-keychain"
 ```
 
 ## Mac/iOS Usage
