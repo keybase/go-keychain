@@ -62,9 +62,12 @@ func NewService() (*SecretService, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open dbus connection: %w", err)
 	}
+
 	signalCh := make(chan *dbus.Signal, 16)
 	conn.Signal(signalCh)
+
 	_ = conn.AddMatchSignal(dbus.WithMatchOption("org.freedesktop.Secret.Prompt", "Completed"))
+
 	return &SecretService{conn: conn, signalCh: signalCh, sessionOpenTimeout: DefaultSessionOpenTimeout}, nil
 }
 
@@ -92,6 +95,7 @@ func (s *SecretService) openSessionRaw(mode AuthenticationMode, sessionAlgorithm
 	if err != nil {
 		return sessionOpenResponse{}, fmt.Errorf("failed to open secretservice session: %w", err)
 	}
+
 	return resp, nil
 }
 
@@ -107,6 +111,7 @@ func (s *SecretService) OpenSession(mode AuthenticationMode) (session *Session, 
 		sessionAlgorithmInput = dbus.MakeVariant("")
 	case AuthenticationDHAES:
 		group := rfc2409SecondOakleyGroup()
+
 		private, public, err := group.NewKeypair()
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate keypair: %w", err)
@@ -158,6 +163,7 @@ func (s *SecretService) OpenSession(mode AuthenticationMode) (session *Session, 
 		group := rfc2409SecondOakleyGroup()
 		theirPublic := new(big.Int)
 		theirPublic.SetBytes(theirPublicBigEndian)
+
 		aesKey, err := group.keygenHKDFSHA256AES128(theirPublic, session.Private)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate AES key: %w", err)
@@ -194,6 +200,7 @@ const ReplaceBehaviorReplace = 1
 
 func (s *SecretService) CreateItem(collection dbus.ObjectPath, properties map[string]dbus.Variant, secret Secret, replaceBehavior ReplaceBehavior) (item dbus.ObjectPath, err error) {
 	var replace bool
+
 	switch replaceBehavior {
 	case ReplaceBehaviorDoNotReplace:
 		replace = false
@@ -253,6 +260,7 @@ func (s *SecretService) GetAttributes(item dbus.ObjectPath) (attributes Attribut
 
 func (s *SecretService) GetSecret(item dbus.ObjectPath, session Session) (secretPlaintext []byte, err error) {
 	var secretI []interface{}
+
 	err = s.Obj(item).
 		Call("org.freedesktop.Secret.Item.GetSecret", NilFlags, session.Path).
 		Store(&secretI)
@@ -273,7 +281,7 @@ func (s *SecretService) GetSecret(item dbus.ObjectPath, session Session) (secret
 	case AuthenticationDHAES:
 		plaintext, err := unauthenticatedAESCBCDecrypt(secret.Parameters, secret.Value, session.AESKey)
 		if err != nil {
-			return nil, nil
+			return nil, nil // nolint:nilerr
 		}
 
 		secretPlaintext = plaintext
@@ -339,7 +347,7 @@ func (p PromptDismissedError) Error() string {
 // PromptAndWait is NOT thread-safe.
 func (s *SecretService) PromptAndWait(prompt dbus.ObjectPath) (paths *dbus.Variant, err error) {
 	if prompt == NullPrompt {
-		return nil, nil
+		return nil, nil // nolint:nilerr
 	}
 
 	call := s.Obj(prompt).Call("org.freedesktop.Secret.Prompt.Prompt", NilFlags, "Keyring Prompt")
@@ -349,6 +357,7 @@ func (s *SecretService) PromptAndWait(prompt dbus.ObjectPath) (paths *dbus.Varia
 
 	for {
 		var result PromptCompletedResult
+
 		select {
 		case signal, ok := <-s.signalCh:
 			if !ok {
