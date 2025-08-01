@@ -19,7 +19,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - uses: actions/checkout@v3
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v8
         with:
           version: latest
       - run: go vet ./...
