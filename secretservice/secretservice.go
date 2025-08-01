@@ -211,6 +211,7 @@ func (s *SecretService) CreateItem(collection dbus.ObjectPath, properties map[st
 	}
 
 	var prompt dbus.ObjectPath
+
 	err = s.Obj(collection).
 		Call("org.freedesktop.Secret.Collection.CreateItem", NilFlags, properties, secret, replace).
 		Store(&item, &prompt)
