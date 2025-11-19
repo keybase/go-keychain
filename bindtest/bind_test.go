@@ -6,7 +6,7 @@ package bindtest
 import (
 	"testing"
 
-	"github.com/keybase/go-keychain/bind"
+	"github.com/cloudengio/go-keychain/bind"
 	"github.com/stretchr/testify/require"
 )
 
