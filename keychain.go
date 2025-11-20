@@ -216,7 +216,7 @@ type Accessible int
 
 const (
 	// AccessibleDefault is the default
-	AccessibleDefault Accessible = 0
+	AccessibleDefault Accessible = iota
 	// AccessibleWhenUnlocked is when unlocked
 	AccessibleWhenUnlocked = 1
 	// AccessibleAfterFirstUnlock is after first unlock
