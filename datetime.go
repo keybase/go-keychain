@@ -9,6 +9,7 @@ package keychain
 #include <CoreFoundation/CoreFoundation.h>
 */
 import "C"
+
 import (
 	"math"
 	"time"
