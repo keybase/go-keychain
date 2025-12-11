@@ -1,13 +1,64 @@
-linters-settings:
-  gocritic:
-    disabled-checks:
-      - ifElseChain
-      - elseif
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  build-tags:
+    - skipsecretserviceintegrationtests
 
 linters:
   enable:
-    - gofmt
-    - gocritic
-    - unconvert
-    - revive
-    - govet
+    # Core recommended linters
+    - errcheck # Checks for unchecked errors
+    - govet # Go vet checks
+    - ineffassign # Detects ineffectual assignments
+    - staticcheck # Advanced static analysis
+    - unused # Finds unused code
+
+    # Code quality
+    - misspell # Finds commonly misspelled words
+    - unconvert # Unnecessary type conversions
+    - unparam # Finds unused function parameters
+    - gocritic # Various checks
+    - revive # Fast, configurable linter
+
+    # Security and best practices
+    - gosec # Security-focused linter
+    - bodyclose # Checks HTTP response body closed
+    - noctx # Finds HTTP requests without context
+
+  settings:
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+        - elseif
+
+    govet:
+      enable-all: true
+      disable:
+        - shadow
+        - fieldalignment
+
+    revive:
+      enable-all-rules: false
+
+  exclusions:
+    rules:
+      # Exclude specific revive rules
+      - linters:
+          - revive
+        text: "package-comments"
+
+      - linters:
+          - revive
+        text: "exported"
+
+      # Exclude specific staticcheck rules
+      - linters:
+          - staticcheck
+        text: "ST1005"
+
+      # Exclude specific gocritic rules
+      - linters:
+          - gocritic
+        text: "ifElseChain"
