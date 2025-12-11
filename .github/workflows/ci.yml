@@ -1,4 +1,5 @@
 name: CI
+
 on:
   push:
     branches:
@@ -6,21 +7,37 @@ on:
   pull_request:
     branches:
       - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    timeout-minutes: 15
     strategy:
       matrix:
-        go-version: [1.21.x, 1.22.x, 1.23.x]
+        go-version: [1.25.x, 1.24.x]
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
-      - uses: actions/checkout@v3
+          cache: true
+
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.63
-      - run: go vet ./...
-      - run: go test -tags skipsecretserviceintegrationtests ./...
+          version: v2.7.2
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
+        run: go test -race -tags skipsecretserviceintegrationtests ./...
