@@ -28,6 +28,7 @@ CFArrayRef CFArrayCreateSafe2(CFAllocatorRef allocator, const uintptr_t *values,
 }
 */
 import "C"
+
 import (
 	"errors"
 	"fmt"

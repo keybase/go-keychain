@@ -6,6 +6,10 @@ run:
   build-tags:
     - skipsecretserviceintegrationtests
 
+formatters:
+  enable:
+    - gofumpt
+
 linters:
   enable:
     # Core recommended linters
