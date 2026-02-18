@@ -3,7 +3,6 @@
 // It should prompt you for your keyring password twice.
 
 //go:build !skipsecretserviceintegrationtests
-// +build !skipsecretserviceintegrationtests
 
 package secretservice
 
