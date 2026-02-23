@@ -188,6 +188,8 @@ var (
 	CreationDateKey = attrKey(C.CFTypeRef(C.kSecAttrCreationDate))
 	// ModificationDateKey is for kSecAttrModificationDate
 	ModificationDateKey = attrKey(C.CFTypeRef(C.kSecAttrModificationDate))
+
+	DataProtectionKeyChainKey = attrKey(C.CFTypeRef(C.kSecUseDataProtectionKeychain))
 )
 
 // Synchronizable is the items synchronizable status
@@ -366,6 +368,15 @@ func (k *Item) SetSynchronizable(sync Synchronizable) {
 		k.attr[SynchronizableKey] = syncTypeRef[sync]
 	} else {
 		delete(k.attr, SynchronizableKey)
+	}
+}
+
+// SetDataProtectionKeyChain sets the data protection keychain attribute.
+func (k *Item) SetDataProtectionKeyChain(value bool) {
+	if value {
+		k.attr[DataProtectionKeyChainKey] = true
+	} else {
+		delete(k.attr, DataProtectionKeyChainKey)
 	}
 }
 
