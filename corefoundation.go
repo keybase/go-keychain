@@ -43,6 +43,12 @@ func Release(ref C.CFTypeRef) {
 	C.CFRelease(ref)
 }
 
+// releaseCFDictionary releases a CFDictionaryRef. Wrapper around a C function
+// for testing (cgo is not supported directly in _test.go files).
+func releaseCFDictionary(d C.CFDictionaryRef) {
+	Release(C.CFTypeRef(d))
+}
+
 // BytesToCFData will return a CFDataRef and if non-nil, must be released with
 // Release(ref).
 func BytesToCFData(b []byte) (C.CFDataRef, error) {

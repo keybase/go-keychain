@@ -20,3 +20,12 @@ var accessibleTypeRef = map[Accessible]C.CFTypeRef{
 	AccessibleAfterFirstUnlockThisDeviceOnly: C.CFTypeRef(C.kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly),
 	AccessibleAccessibleAlwaysThisDeviceOnly: C.CFTypeRef(C.kSecAttrAccessibleAlwaysThisDeviceOnly),
 }
+
+// UseDataProtectionKeychainKey has no effect on iOS, where the data protection
+// keychain is the only keychain. It is defined for cross-platform API parity
+// and is always empty.
+var UseDataProtectionKeychainKey string
+
+// SetUseDataProtectionKeychain is a no-op on iOS, where the data protection
+// keychain is the only keychain. It is defined for cross-platform API parity.
+func (*Item) SetUseDataProtectionKeychain(_ bool) {}
