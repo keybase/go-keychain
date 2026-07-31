@@ -3,7 +3,11 @@
 package keychain
 
 import (
+	"bytes"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUpdateItem(t *testing.T) {
@@ -125,4 +129,77 @@ func TestInternetPassword(t *testing.T) {
 	if r.Comment != "this is the comment" {
 		t.Errorf("expected comment 'this is the comment' but got %q", r.Comment)
 	}
+}
+
+func TestGenericAttributes(t *testing.T) {
+	t.Run("generic password can have generic attributes", func(t *testing.T) {
+		service, account, label, accessGroup, password := "TestGenericPasswordRef", "test2", "generic-password", "TestGenericAttributes", "toomanysecrets"
+		item := NewGenericPassword(service, account, label, []byte(password), accessGroup)
+		attributes := map[string]any{
+			"color": "green",
+			"large": string(bytes.Repeat([]byte{'a'}, 1024*1024)),
+			"score": 10,
+		}
+		t.Cleanup(func() {
+			queryDelete := NewItem()
+			queryDelete.SetAccessGroup(accessGroup)
+			queryDelete.SetAccount(account)
+			queryDelete.SetService(service)
+			queryDelete.SetSecClass(SecClassGenericPassword)
+			assert.NoError(t, DeleteItem(queryDelete))
+		})
+
+		item.SetGenericMetadata(attributes)
+		require.NoError(t, AddItem(item))
+
+		query := NewItem()
+		query.SetReturnAttributes(true)
+		query.SetSecClass(SecClassGenericPassword)
+		query.SetMatchLimit(MatchLimitOne)
+		query.SetService(service)
+		query.SetAccount(account)
+		query.SetAccessGroup(accessGroup)
+		query.SetLabel(label)
+
+		results, err := QueryItem(query)
+		require.NoError(t, err)
+		assert.Len(t, results, 1)
+		assert.EqualValues(t, attributes, results[0].Attributes)
+	})
+
+	t.Run("internet password cannot set generic attributes", func(t *testing.T) {
+		item := NewItem()
+		item.SetSecClass(SecClassInternetPassword)
+
+		// Internet password-specific attributes
+		item.SetProtocol("htps")
+		item.SetServer("8xs8h5x5dfc0AI5EzT81l.com")
+		item.SetPort(1234)
+		item.SetPath("/this/is/the/path")
+
+		item.SetAccount("this-is-the-username")
+		item.SetLabel("this is the label")
+		item.SetData([]byte("this is the password"))
+		item.SetGenericMetadata(map[string]any{
+			"anything": "really",
+		})
+		t.Cleanup(func() {
+			assert.NoError(t, DeleteItem(item))
+		})
+		require.NoError(t, AddItem(item))
+
+		query := NewItem()
+		query.SetSecClass(SecClassInternetPassword)
+		query.SetProtocol("htps")
+		query.SetServer("8xs8h5x5dfc0AI5EzT81l.com")
+		query.SetPort(1234)
+		query.SetPath("/this/is/the/path")
+		query.SetAccount("this-is-the-username")
+		query.SetLabel("this is the label")
+		query.SetReturnAttributes(true)
+		result, err := QueryItem(query)
+		assert.Len(t, result, 1)
+		assert.NoError(t, err)
+		assert.Empty(t, result[0].Attributes)
+	})
 }
