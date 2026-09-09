@@ -1,8 +1,8 @@
 module github.com/keybase/go-keychain
 
-go 1.25.0
+go 1.26.0
 
-toolchain go1.25.5
+toolchain go1.27.1
 
 require (
 	github.com/keybase/dbus v0.0.0-20220506165403-5aa21ea2c23a
