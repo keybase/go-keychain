@@ -119,9 +119,14 @@ func unauthenticatedAESCBCDecrypt(iv []byte, ciphertext []byte, key []byte) ([]b
 }
 
 func padPKCS7(xs []byte, n int) []byte {
+	// Validate block size to prevent integer overflow
+	if n < 1 || n > 255 {
+		panic("block size must be between 1 and 255")
+	}
+	//nolint:gosec // G115: Safe after bounds check on line 123
 	m := byte(n - (len(xs) % n))
 	if m == 0 {
-		m = 16
+		m = byte(n)
 	}
 	return append(xs, bytes.Repeat([]byte{m}, int(m))...)
 }
