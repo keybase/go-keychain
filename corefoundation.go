@@ -7,6 +7,7 @@ package keychain
 #cgo LDFLAGS: -framework CoreFoundation
 
 #include <CoreFoundation/CoreFoundation.h>
+#include <Security/Security.h>
 
 // Can't cast a *uintptr to *unsafe.Pointer in Go, and casting
 // C.CFTypeRef to unsafe.Pointer is unsafe in Go, so have shim functions to
@@ -19,11 +20,11 @@ package keychain
 // TODO: Move this file into its own package depended on by go-kext
 // and this package.
 
-CFDictionaryRef CFDictionaryCreateSafe2(CFAllocatorRef allocator, const uintptr_t *keys, const uintptr_t *values, CFIndex numValues, const CFDictionaryKeyCallBacks *keyCallBacks, const CFDictionaryValueCallBacks *valueCallBacks) {
+static CFDictionaryRef CFDictionaryCreateSafe2(CFAllocatorRef allocator, const uintptr_t *keys, const uintptr_t *values, CFIndex numValues, const CFDictionaryKeyCallBacks *keyCallBacks, const CFDictionaryValueCallBacks *valueCallBacks) {
   return CFDictionaryCreate(allocator, (const void **)keys, (const void **)values, numValues, keyCallBacks, valueCallBacks);
 }
 
-CFArrayRef CFArrayCreateSafe2(CFAllocatorRef allocator, const uintptr_t *values, CFIndex numValues, const CFArrayCallBacks *callBacks) {
+static CFArrayRef CFArrayCreateSafe2(CFAllocatorRef allocator, const uintptr_t *values, CFIndex numValues, const CFArrayCallBacks *callBacks) {
   return CFArrayCreate(allocator, (const void **)values, numValues, callBacks);
 }
 */
@@ -186,6 +187,12 @@ func ConvertMapToCFDictionary(attr map[string]interface{}) (C.CFDictionaryRef, e
 		switch val := i.(type) {
 		default:
 			return 0, fmt.Errorf("Unsupported value type: %v", reflect.TypeOf(i))
+		case *AuthenticationContext:
+			// Ignore this, the pointer can't be added to the dictionary
+			// This value is used within the QueryItemRef functions
+			continue
+		case C.SecAccessControlRef:
+			valueRef = C.CFTypeRef(val)
 		case C.CFTypeRef:
 			valueRef = val
 		case bool:
