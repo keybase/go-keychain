@@ -1,0 +1,19 @@
+.github/workflows/ci.yml
+  s_d292278b6d3bb4::t_1771231fdfdda8 41-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "22e44faf4534625188238b66ad0cd72c80c0dff8",
+  "prompts": {},
+  "sessions": {
+    "s_d292278b6d3bb4": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "cff83443-51f0-4ab6-8739-49de15df4baa",
+        "model": "grok-4.5"
+      },
+      "human_author": "Joshua Blum <joshua.blum@zoom.us>"
+    }
+  }
+}
